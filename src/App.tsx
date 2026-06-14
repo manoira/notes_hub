@@ -1,28 +1,47 @@
+import { LinkPreview } from './components/LinkPreview'
 import { NoteEditor } from './components/NoteEditor'
 import { Sidebar } from './components/Sidebar'
 import { useNotes } from './hooks/useNotes'
 import './App.css'
 
 function App() {
-  const { notes, activeNote, activeId, selectNote, addNote, updateNote, deleteNote } = useNotes()
+  const {
+    items,
+    activeItem,
+    activeId,
+    selectItem,
+    addPage,
+    addLink,
+    updatePage,
+    updateLink,
+    deleteItem,
+  } = useNotes()
 
   return (
     <div className="app-shell">
       <Sidebar
-        notes={notes}
+        items={items}
         activeId={activeId}
-        onSelect={selectNote}
-        onAdd={addNote}
+        onSelect={selectItem}
+        onAddPage={addPage}
+        onAddLink={addLink}
       />
-      {activeNote ? (
+      {activeItem?.kind === 'page' ? (
         <NoteEditor
-          key={activeNote.id}
-          note={activeNote}
-          onChange={patch => updateNote(activeNote.id, patch)}
-          onDelete={() => deleteNote(activeNote.id)}
+          key={activeItem.id}
+          note={activeItem}
+          onChange={patch => updatePage(activeItem.id, patch)}
+          onDelete={() => deleteItem(activeItem.id)}
+        />
+      ) : activeItem?.kind === 'link' ? (
+        <LinkPreview
+          key={activeItem.id}
+          link={activeItem}
+          onChange={patch => updateLink(activeItem.id, patch)}
+          onDelete={() => deleteItem(activeItem.id)}
         />
       ) : (
-        <main className="editor-empty">Select or create a page</main>
+        <main className="editor-empty">Select or create a page or smart link</main>
       )}
     </div>
   )

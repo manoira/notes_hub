@@ -1,8 +1,8 @@
-import type { Note } from '../types/note'
+import type { Page } from '../types/note'
 
 type NoteEditorProps = {
-  note: Note
-  onChange: (patch: Partial<Pick<Note, 'title' | 'content'>>) => void
+  note: Page
+  onChange: (patch: Partial<Pick<Page, 'title' | 'content'>>) => void
   onDelete: () => void
 }
 
