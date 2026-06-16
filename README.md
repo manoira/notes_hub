@@ -46,7 +46,49 @@ notes_hub/
 | 5174 | media-hub      |
 | 5175 | notes_hub      |
 
-## Production (Render)
+## Production (Websupport — emmyzettergren.se)
+
+Auto-deploy via **GitHub Actions** → SFTP → `public_html` on every push to `main`.
+
+### 1. Rensa WordPress (engångs)
+
+Ta backup om du vill, sedan radera WordPress-filer i `public_html` hos Websupport (eller låt första deploy göra det — workflowen ersätter allt i mappen).
+
+### 2. Skapa SFTP-uppgifter
+
+1. Logga in på [admin.websupport.se](https://admin.websupport.se)
+2. Välj domänen **emmyzettergren.se**
+3. **Avancerad konfiguration → FTP-konton** → skapa eller öppna ett konto
+4. Notera **server** (domän eller IP), **användarnamn** och **lösenord**
+5. SFTP använder **port 22**
+
+### 3. Lägg in GitHub Secrets (måste du göra själv)
+
+Jag kan inte skapa secrets åt dig — de innehåller ditt lösenord och sätts bara i GitHub:
+
+**[→ Öppna Secrets för notes_hub](https://github.com/manoira/notes_hub/settings/secrets/actions)**
+
+Klicka **New repository secret** för varje rad:
+
+| Secret name | Värde |
+| ----------- | ----- |
+| `WEBSUPPORT_SFTP_SERVER` | Server från Websupport, t.ex. `emmyzettergren.se` eller IP-adressen de visar |
+| `WEBSUPPORT_SFTP_USERNAME` | FTP-användarnamn |
+| `WEBSUPPORT_SFTP_PASSWORD` | FTP-lösenord |
+
+Dela **aldrig** lösenordet i chat, kod eller commit.
+
+### 4. Pusha och deploya
+
+När secrets finns: varje `git push` till `main` bygger appen och laddar upp `dist/` till `/public_html/`.
+
+- Workflow: `.github/workflows/deploy-websupport.yml`
+- Manuell körning: GitHub → **Actions** → **Deploy to Websupport** → **Run workflow**
+- `.htaccess` för Apache ligger i `public/` och följer med i builden
+
+Om uppladdningen misslyckas, prova att ändra `remoteDir` i workflow-filen till `/` (vissa FTP-konton pekar redan på `public_html`).
+
+## Production (Render — alternativ)
 
 Notes Hub is a **static site** on Render (CDN). Media Hub uses a **web service** because it serves an API and database; Notes Hub only ships the Vite build until you add a backend.
 
