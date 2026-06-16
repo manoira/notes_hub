@@ -25,14 +25,25 @@ jobs:
       - name: Build
         run: npm ci && npm run build
 
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
       - name: Deploy via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
-        with:
-          server: ${{ secrets.WEBSUPPORT_SFTP_SERVER }}
-          username: ${{ secrets.WEBSUPPORT_SFTP_USERNAME }}
-          password: ${{ secrets.WEBSUPPORT_SFTP_PASSWORD }}
-          port: 22
-          sftp_only: true
-          local_path: './dist/*'
-          remote_path: '/public_html/'
-          delete_remote_files: false
+        env:
+          SFTP_SERVER: ${{ secrets.WEBSUPPORT_SFTP_SERVER }}
+          SFTP_USERNAME: ${{ secrets.WEBSUPPORT_SFTP_USERNAME }}
+          SFTP_PASSWORD: ${{ secrets.WEBSUPPORT_SFTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          lftp -u "$SFTP_USERNAME","$SFTP_PASSWORD" "sftp://$SFTP_SERVER:22" <<'EOF'
+          set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=no"
+          set cmd:fail-exit yes
+          pwd
+          ls
+          cd public_html
+          pwd
+          ls
+          mirror -Re --delete --verbose dist/ .
+          ls
+          bye
+          EOF
