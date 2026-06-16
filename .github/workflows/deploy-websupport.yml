@@ -25,14 +25,14 @@ jobs:
       - name: Build
         run: npm ci && npm run build
 
-      - name: Deploy via SFTP
+      - name: Deploy via FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.WEBSUPPORT_SFTP_SERVER }}
           username: ${{ secrets.WEBSUPPORT_SFTP_USERNAME }}
           password: ${{ secrets.WEBSUPPORT_SFTP_PASSWORD }}
-          protocol: sftp
-          port: 22
+          protocol: ftps
+          port: 21
           local-dir: ./dist/
           server-dir: ./public_html/
           dangerous-clean-slate: true
