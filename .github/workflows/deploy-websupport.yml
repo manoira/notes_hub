@@ -26,12 +26,13 @@ jobs:
         run: npm ci && npm run build
 
       - name: Deploy via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.WEBSUPPORT_SFTP_SERVER }}
           username: ${{ secrets.WEBSUPPORT_SFTP_USERNAME }}
           password: ${{ secrets.WEBSUPPORT_SFTP_PASSWORD }}
+          protocol: sftp
           port: 22
-          local_path: './dist/*'
-          remote_path: '/public_html/'
-          delete_remote_files: true
+          local-dir: ./dist/
+          server-dir: ./public_html/
+          dangerous-clean-slate: true
