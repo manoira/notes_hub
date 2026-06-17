@@ -12,7 +12,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,8 +40,6 @@ jobs:
           set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=no"
           set cmd:fail-exit yes
           cd public_html
-          rm -f index.php wp-*.php xmlrpc.php license.txt .htaccess
-          rm -rf wp-admin wp-content wp-includes
           mirror -Re --verbose dist/ .
           bye
           EOF
