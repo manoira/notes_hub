@@ -26,8 +26,8 @@ jobs:
       - name: Build
         run: npm ci && npm run build
 
-      - name: Install lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass openssh-client
 
       - name: Deploy via SFTP
         env:
@@ -36,26 +36,16 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.WEBSUPPORT_SFTP_PASSWORD }}
         run: |
           set -euo pipefail
+          batch="$(mktemp)"
           {
-            echo 'set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=no"'
-            echo 'set cmd:fail-exit yes'
-            echo 'cd public_html'
-            echo 'rm -f index.php'
+            echo "cd public_html"
             find dist -type f | while IFS= read -r file; do
-              relpath="${file#dist/}"
-              reldir="$(dirname "$relpath")"
-              filename="$(basename "$relpath")"
-              if [ "$reldir" = "." ]; then
-                echo 'lcd dist'
-                echo "put -O . $filename"
-              else
-                echo "mkdir -p -f $reldir"
-                echo "cd $reldir"
-                echo "lcd dist/$reldir"
-                echo "put -O . $filename"
-                echo 'cd ..'
-                echo 'lcd ..'
-              fi
+              echo "put $file ${file#dist/}"
             done
-            echo 'bye'
-          } | lftp -u "$SFTP_USERNAME","$SFTP_PASSWORD" "sftp://$SFTP_SERVER:22"
+            echo "bye"
+          } > "$batch"
+          sshpass -p "$SFTP_PASSWORD" sftp \
+            -o StrictHostKeyChecking=no \
+            -P 22 \
+            -b "$batch" \
+            "$SFTP_USERNAME@$SFTP_SERVER"
