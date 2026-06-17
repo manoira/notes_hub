@@ -12,7 +12,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,10 +36,26 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.WEBSUPPORT_SFTP_PASSWORD }}
         run: |
           set -euo pipefail
-          lftp -u "$SFTP_USERNAME","$SFTP_PASSWORD" "sftp://$SFTP_SERVER:22" <<'EOF'
-          set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=no"
-          set cmd:fail-exit yes
-          cd public_html
-          mirror -Re --verbose dist/ .
-          bye
-          EOF
+          {
+            echo 'set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=no"'
+            echo 'set cmd:fail-exit yes'
+            echo 'cd public_html'
+            echo 'rm -f index.php'
+            find dist -type f | while IFS= read -r file; do
+              relpath="${file#dist/}"
+              reldir="$(dirname "$relpath")"
+              filename="$(basename "$relpath")"
+              if [ "$reldir" = "." ]; then
+                echo 'lcd dist'
+                echo "put -O . $filename"
+              else
+                echo "mkdir -p -f $reldir"
+                echo "cd $reldir"
+                echo "lcd dist/$reldir"
+                echo "put -O . $filename"
+                echo 'cd ..'
+                echo 'lcd ..'
+              fi
+            done
+            echo 'bye'
+          } | lftp -u "$SFTP_USERNAME","$SFTP_PASSWORD" "sftp://$SFTP_SERVER:22"
