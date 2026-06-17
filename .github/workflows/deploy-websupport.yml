@@ -26,8 +26,8 @@ jobs:
       - name: Build
         run: npm ci && npm run build
 
-      - name: Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass openssh-client
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
 
       - name: Deploy via SFTP
         env:
@@ -36,16 +36,20 @@ jobs:
           SFTP_PASSWORD: ${{ secrets.WEBSUPPORT_SFTP_PASSWORD }}
         run: |
           set -euo pipefail
-          batch="$(mktemp)"
-          {
-            echo "cd public_html"
-            find dist -type f | while IFS= read -r file; do
-              echo "put $file ${file#dist/}"
-            done
-            echo "bye"
-          } > "$batch"
-          sshpass -p "$SFTP_PASSWORD" sftp \
-            -o StrictHostKeyChecking=no \
-            -P 22 \
-            -b "$batch" \
-            "$SFTP_USERNAME@$SFTP_SERVER"
+          lftp -u "$SFTP_USERNAME","$SFTP_PASSWORD" "sftp://$SFTP_SERVER:22" <<'EOF'
+          set sftp:connect-program "ssh -a -x -o StrictHostKeyChecking=no"
+          set net:timeout 30
+          set net:max-retries 2
+          set cmd:fail-exit yes
+          cd public_html
+          lcd dist
+          put index.html
+          put .htaccess
+          put icons.svg
+          put favicon.svg
+          mkdir -f assets
+          cd assets
+          lcd assets
+          mput *
+          bye
+          EOF
