@@ -41,7 +41,6 @@ jobs:
           set net:timeout 30
           set net:max-retries 2
           set cmd:fail-exit yes
-          cd public_html
           lcd dist
           put index.html
           put .htaccess
