@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Page } from '../types/note'
 import { APP_VERSION } from '../buildInfo'
-import { getTextareaAnchorRect } from '../utils/caretPosition'
+import { getTextareaCaretRect } from '../utils/caretPosition'
 import {
   applySlashCommand,
   filterSlashCommands,
@@ -40,7 +40,7 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
   useLayoutEffect(() => {
     const textarea = bodyRef.current
     if (!slashState || !textarea) return
-    setMenuPosition(getTextareaAnchorRect(textarea))
+    setMenuPosition(getTextareaCaretRect(textarea, slashState.cursor))
   }, [slashState, note.content, cursor])
 
   function syncSlashFromTextarea(textarea: HTMLTextAreaElement) {
@@ -139,7 +139,7 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
           onScroll={() => {
             const textarea = bodyRef.current
             if (textarea && slashState) {
-              setMenuPosition(getTextareaAnchorRect(textarea))
+              setMenuPosition(getTextareaCaretRect(textarea, slashState.cursor))
             }
           }}
           placeholder="Start writing... Type / for headings, lists, and more."
