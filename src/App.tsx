@@ -13,9 +13,11 @@ function App() {
   }, [])
 
   const {
+    loaded,
     items,
     activeItem,
     activeId,
+    persistence,
     selectItem,
     addPage,
     addLink,
@@ -24,11 +26,20 @@ function App() {
     deleteItem,
   } = useNotes()
 
+  if (!loaded) {
+    return (
+      <main className="editor-empty app-loading" aria-busy="true">
+        Loading workspace…
+      </main>
+    )
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
         items={items}
         activeId={activeId}
+        persistence={persistence}
         onSelect={selectItem}
         onAddPage={addPage}
         onAddLink={addLink}
@@ -41,6 +52,7 @@ function App() {
           onSelectLink={selectItem}
           onChange={patch => updatePage(activeItem.id, patch)}
           onDelete={() => deleteItem(activeItem.id)}
+          persistence={persistence}
         />
       ) : activeItem?.kind === 'link' ? (
         <LinkPreview

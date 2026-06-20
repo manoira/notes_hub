@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { APP_VERSION } from '../buildInfo'
 import type { SidebarItem } from '../types/note'
+import type { PersistenceState } from '../types/workspace'
 import { AddLinkDialog } from './AddLinkDialog'
 import { SidebarTree } from './SidebarTree'
+import { SyncStatus } from './SyncStatus'
 
 type SidebarProps = {
   items: SidebarItem[]
   activeId: string | null
+  persistence: PersistenceState
   onSelect: (id: string) => void
   onAddPage: (parentId?: string | null) => void
   onAddLink: (url: string, title?: string, parentId?: string | null) => boolean
@@ -15,6 +18,7 @@ type SidebarProps = {
 export function Sidebar({
   items,
   activeId,
+  persistence,
   onSelect,
   onAddPage,
   onAddLink,
@@ -58,6 +62,7 @@ export function Sidebar({
             onAddLink={handleAddLink}
           />
         </nav>
+        <SyncStatus persistence={persistence} />
         <p className="sidebar-build">Build {APP_VERSION}</p>
       </aside>
 

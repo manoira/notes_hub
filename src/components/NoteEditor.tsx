@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Page, SmartLink } from '../types/note'
+import type { PersistenceState } from '../types/workspace'
 import { APP_VERSION } from '../buildInfo'
 import { getTextareaCaretRect } from '../utils/caretPosition'
 import {
@@ -10,6 +11,7 @@ import {
   type SlashCommand,
   type SlashMenuState,
 } from '../utils/slashCommands'
+import { storageHint } from '../utils/storageHint'
 import { PageLinkBookmarks } from './PageLinkBookmarks'
 import { SlashMenu } from './SlashMenu'
 
@@ -17,6 +19,7 @@ type NoteEditorProps = {
   note: Page
   childLinks?: SmartLink[]
   onSelectLink?: (id: string) => void
+  persistence: PersistenceState
   onChange: (patch: Partial<Pick<Page, 'title' | 'content'>>) => void
   onDelete: () => void
 }
@@ -25,6 +28,7 @@ export function NoteEditor({
   note,
   childLinks = [],
   onSelectLink,
+  persistence,
   onChange,
   onDelete,
 }: NoteEditorProps) {
@@ -158,9 +162,7 @@ export function NoteEditor({
           aria-label="Note content"
         />
       </div>
-      <p className="editor-storage-hint">
-        Notes are saved in this browser only (not on the server yet).
-      </p>
+      <p className="editor-storage-hint">{storageHint(persistence)}</p>
       {slashState &&
         createPortal(
           <div

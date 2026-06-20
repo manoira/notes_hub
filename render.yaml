@@ -1,7 +1,7 @@
 # Notes Hub — Render Blueprint
 #
 # Static site on Render CDN. Auto-deploys from GitHub main.
-# Media Hub uses a web service (API + DB); add a second service here when Neon arrives.
+# API service stores workspace JSON on disk until Postgres is wired up.
 
 services:
   - type: web
@@ -15,6 +15,13 @@ services:
         value: "22"
       - key: BASE_PATH
         value: /
+      # Enable cross-device sync once notes-hub-api is live:
+      # - key: VITE_STORAGE_MODE
+      #   value: remote
+      # - key: VITE_API_BASE_URL
+      #   value: https://notes-hub-api.onrender.com
+      # - key: VITE_WORKSPACE_TOKEN
+      #   sync: false
     routes:
       - type: rewrite
         source: /*
@@ -23,3 +30,24 @@ services:
       - path: /index.html
         name: Cache-Control
         value: no-cache
+
+  - type: web
+    name: notes-hub-api
+    runtime: node
+    branch: main
+    rootDir: server
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: WORKSPACE_DATA_FILE
+        value: /var/data/workspace.json
+      - key: WORKSPACE_TOKEN
+        sync: false
+      - key: CORS_ORIGIN
+        value: https://emmyzettergren.se
+    disk:
+      name: notes-hub-api-data
+      mountPath: /var/data
+      sizeGB: 1

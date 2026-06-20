@@ -19,6 +19,10 @@ npm run dev
 
 Open http://localhost:5175/
 
+## Cross-device sync (preparation)
+
+By default notes stay in the browser. To test cloud sync locally, see [docs/CROSS_DEVICE_SYNC.md](docs/CROSS_DEVICE_SYNC.md).
+
 Other commands:
 
 ```powershell

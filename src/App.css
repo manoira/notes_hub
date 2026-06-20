@@ -197,12 +197,40 @@
 
 .sidebar-build {
   margin: 0;
-  padding: 0.65rem 1rem 0.85rem;
+  padding: 0.35rem 1rem 0.85rem;
   border-top: 1px solid var(--border);
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--accent);
   letter-spacing: 0.02em;
+}
+
+.sync-status {
+  margin: 0;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sync-status-local {
+  color: var(--muted);
+}
+
+.sync-status-remote,
+.sync-status-synced {
+  color: var(--accent);
+}
+
+.sync-status-error {
+  color: var(--danger);
+}
+
+.app-loading {
+  min-height: 100vh;
 }
 
 .editor {

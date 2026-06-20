@@ -1,160 +1,133 @@
-import { useCallback, useEffect, useState } from 'react'
-import type { Note, Page, SidebarItem, SmartLink } from '../types/note'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { Page, SidebarItem, SmartLink } from '../types/note'
+import type { PersistenceState } from '../types/workspace'
+import { appConfig } from '../config/appConfig'
+import {
+  createWorkspaceStorage,
+  migrateLocalSnapshotToRemote,
+} from '../storage'
+import { WorkspaceConflictError } from '../storage/types'
+import {
+  createLink,
+  createPage,
+  createSnapshot,
+  loadLocalSnapshot,
+  saveLocalSnapshot,
+} from '../storage/workspace'
 import { collectDescendantIds, isValidParentId } from '../utils/tree'
-import { normalizeUrl, titleFromUrl } from '../utils/url'
-
-const STORAGE_KEY = 'notes_hub_v2'
-const LEGACY_STORAGE_KEY = 'notes_hub_v1'
-
-function createPage(title = 'Untitled', parentId: string | null = null): Page {
-  const now = new Date().toISOString()
-  return {
-    id: crypto.randomUUID(),
-    kind: 'page',
-    title,
-    content: '',
-    parentId,
-    updatedAt: now,
-  }
-}
-
-function createLink(
-  url: string,
-  title?: string,
-  parentId: string | null = null,
-): SmartLink {
-  const now = new Date().toISOString()
-  return {
-    id: crypto.randomUUID(),
-    kind: 'link',
-    title: title?.trim() || titleFromUrl(url),
-    url,
-    parentId,
-    updatedAt: now,
-  }
-}
-
-function seedItems(): SidebarItem[] {
-  const welcome = createPage('Welcome')
-  welcome.content =
-    'Notes Hub is your space for notes and data.\n\nUse the sidebar to switch pages, add smart links, or create new ones.'
-
-  const ideas = createPage('Ideas')
-  ideas.content = '- Project roadmap\n- Meeting notes\n- Research links'
-
-  const repo = createLink('https://github.com/manoira/notes_hub', 'notes_hub on GitHub')
-
-  return [welcome, ideas, repo]
-}
-
-function toPage(note: Note): Page {
-  return {
-    ...note,
-    kind: 'page',
-    parentId: note.parentId ?? null,
-  }
-}
-
-function withParentId(item: SidebarItem): SidebarItem {
-  return { ...item, parentId: item.parentId ?? null }
-}
-
-function isValidItem(item: unknown): item is SidebarItem {
-  if (!item || typeof item !== 'object') return false
-  const record = item as SidebarItem
-  if (typeof record.id !== 'string' || typeof record.title !== 'string') return false
-  if (typeof record.updatedAt !== 'string') return false
-  if (
-    record.parentId !== null &&
-    record.parentId !== undefined &&
-    typeof record.parentId !== 'string'
-  ) {
-    return false
-  }
-
-  if (record.kind === 'page') {
-    return typeof record.content === 'string'
-  }
-
-  if (record.kind === 'link') {
-    return typeof record.url === 'string' && normalizeUrl(record.url) !== null
-  }
-
-  return false
-}
-
-function normalizeItems(items: SidebarItem[]): SidebarItem[] {
-  const withParents = items.map(withParentId)
-  const ids = new Set(withParents.map(item => item.id))
-
-  return withParents.map(item => {
-    if (item.parentId && !ids.has(item.parentId)) {
-      return { ...item, parentId: null }
-    }
-    return item
-  })
-}
-
-function loadLegacyState(): { items: SidebarItem[]; activeId: string | null } | null {
-  try {
-    const raw = localStorage.getItem(LEGACY_STORAGE_KEY)
-    if (!raw) return null
-
-    const parsed = JSON.parse(raw) as { notes: Note[]; activeId: string | null }
-    if (!Array.isArray(parsed.notes) || parsed.notes.length === 0) return null
-
-    const items = parsed.notes.map(toPage)
-    const activeId =
-      parsed.activeId && items.some(item => item.id === parsed.activeId)
-        ? parsed.activeId
-        : items[0].id
-
-    return { items, activeId }
-  } catch {
-    return null
-  }
-}
-
-function loadState(): { items: SidebarItem[]; activeId: string | null } {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) {
-      const legacy = loadLegacyState()
-      if (legacy) return legacy
-
-      const items = seedItems()
-      return { items, activeId: items[0]?.id ?? null }
-    }
-
-    const parsed = JSON.parse(raw) as { items: SidebarItem[]; activeId: string | null }
-    const items = normalizeItems(
-      Array.isArray(parsed.items) ? parsed.items.filter(isValidItem) : [],
-    )
-
-    if (items.length === 0) {
-      const seeded = seedItems()
-      return { items: seeded, activeId: seeded[0]?.id ?? null }
-    }
-
-    const activeId =
-      parsed.activeId && items.some(item => item.id === parsed.activeId)
-        ? parsed.activeId
-        : items[0].id
-
-    return { items, activeId }
-  } catch {
-    const items = seedItems()
-    return { items, activeId: items[0]?.id ?? null }
-  }
-}
+import { normalizeUrl } from '../utils/url'
 
 export function useNotes() {
-  const [items, setItems] = useState<SidebarItem[]>(() => loadState().items)
-  const [activeId, setActiveId] = useState<string | null>(() => loadState().activeId)
+  const storageRef = useRef(createWorkspaceStorage())
+  const revisionRef = useRef(0)
+  const [loaded, setLoaded] = useState(false)
+  const [items, setItems] = useState<SidebarItem[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [persistence, setPersistence] = useState<PersistenceState>({ status: 'loading' })
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, activeId }))
-  }, [items, activeId])
+    let cancelled = false
+    const storage = storageRef.current
+
+    async function loadWorkspace() {
+      try {
+        if (storage.mode === 'remote') {
+          await migrateLocalSnapshotToRemote(storage)
+        }
+
+        const snapshot = await storage.load()
+        if (cancelled) return
+
+        revisionRef.current = snapshot.revision
+        setItems(snapshot.items)
+        setActiveId(snapshot.activeId)
+        setPersistence({ status: 'ready', mode: storage.mode })
+        setLoaded(true)
+      } catch (error) {
+        if (cancelled) return
+
+        const fallback = loadLocalSnapshot()
+        revisionRef.current = fallback.revision
+        setItems(fallback.items)
+        setActiveId(fallback.activeId)
+        setPersistence({
+          status: 'error',
+          mode: storage.mode,
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Could not load workspace. Showing this browser copy.',
+        })
+        setLoaded(true)
+      }
+    }
+
+    void loadWorkspace()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!loaded) return
+
+    const storage = storageRef.current
+    setPersistence(current =>
+      current.status === 'error' ? current : { status: 'saving', mode: storage.mode },
+    )
+
+    const timeout = window.setTimeout(() => {
+      void (async () => {
+        const snapshot = createSnapshot(items, activeId, revisionRef.current)
+
+        try {
+          await storage.save(snapshot)
+          revisionRef.current = snapshot.revision + 1
+
+          if (storage.mode === 'remote') {
+            saveLocalSnapshot(snapshot)
+          }
+
+          setPersistence({
+            status: 'saved',
+            mode: storage.mode,
+            savedAt: snapshot.updatedAt,
+          })
+        } catch (error) {
+          if (error instanceof WorkspaceConflictError) {
+            try {
+              const remote = await storage.load()
+              revisionRef.current = remote.revision
+              setItems(remote.items)
+              setActiveId(remote.activeId)
+              saveLocalSnapshot(remote)
+              setPersistence({ status: 'ready', mode: storage.mode })
+            } catch (reloadError) {
+              setPersistence({
+                status: 'error',
+                mode: storage.mode,
+                message:
+                  reloadError instanceof Error
+                    ? reloadError.message
+                    : 'Sync conflict. Reload the page.',
+              })
+            }
+            return
+          }
+
+          setPersistence({
+            status: 'error',
+            mode: storage.mode,
+            message:
+              error instanceof Error ? error.message : 'Could not save workspace.',
+          })
+        }
+      })()
+    }, appConfig.saveDebounceMs)
+
+    return () => window.clearTimeout(timeout)
+  }, [items, activeId, loaded])
 
   const activeItem = items.find(item => item.id === activeId) ?? null
 
@@ -236,9 +209,11 @@ export function useNotes() {
   }, [])
 
   return {
+    loaded,
     items,
     activeItem,
     activeId,
+    persistence,
     selectItem,
     addPage,
     addLink,
