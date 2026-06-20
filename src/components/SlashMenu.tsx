@@ -17,11 +17,14 @@ export function SlashMenu({
   onSelect,
   onHover,
 }: SlashMenuProps) {
+  const top = Math.min(Math.max(position.top, 16), window.innerHeight - 340)
+  const left = Math.min(Math.max(position.left, 16), window.innerWidth - 336)
+
   if (commands.length === 0) {
     return (
       <div
         className="slash-menu"
-        style={{ top: position.top, left: position.left }}
+        style={{ top, left }}
         role="listbox"
         aria-label="Slash commands"
       >
@@ -35,7 +38,7 @@ export function SlashMenu({
   return (
     <div
       className="slash-menu"
-      style={{ top: position.top, left: position.left }}
+      style={{ top, left }}
       role="listbox"
       aria-label="Slash commands"
     >

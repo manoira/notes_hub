@@ -130,9 +130,6 @@ export function getSlashMenuState(content: string, cursor: number): SlashMenuSta
   const match = lineBeforeCursor.match(/\/([a-zA-Z0-9]*)$/)
   if (!match || match.index === undefined) return null
 
-  const beforeSlash = lineBeforeCursor.slice(0, match.index)
-  if (beforeSlash.trim().length > 0) return null
-
   return {
     query: match[1].toLowerCase(),
     slashStart: lineStart + match.index,

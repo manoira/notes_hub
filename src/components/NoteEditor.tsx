@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Page } from '../types/note'
 import { getTextareaCaretRect } from '../utils/caretPosition'
 import {
@@ -36,11 +37,11 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
     setSelectedIndex(0)
   }
 
-  function syncSlashMenu(cursor = bodyRef.current?.selectionStart ?? 0) {
+  function syncSlashMenu(content: string, cursor: number) {
     const textarea = bodyRef.current
     if (!textarea) return
 
-    const state = getSlashMenuState(note.content, cursor)
+    const state = getSlashMenuState(content, cursor)
     slashStateRef.current = state
 
     if (!state) {
@@ -53,7 +54,13 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
     setMenuCommands(commands)
     setMenuQuery(state.query)
     setSelectedIndex(current => (current < commands.length ? current : 0))
-    setMenuPosition(getTextareaCaretRect(textarea, state.slashStart))
+    setMenuPosition(getTextareaCaretRect(textarea, state.cursor))
+  }
+
+  function syncSlashMenuFromTextarea() {
+    const textarea = bodyRef.current
+    if (!textarea) return
+    syncSlashMenu(textarea.value, textarea.selectionStart)
   }
 
   function selectSlashCommand(command: SlashCommand) {
@@ -61,7 +68,7 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
     const state = slashStateRef.current
     if (!textarea || !state) return
 
-    const result = applySlashCommand(note.content, state, command)
+    const result = applySlashCommand(textarea.value, state, command)
     onChange({ content: result.content })
     closeSlashMenu()
 
@@ -130,26 +137,30 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
           className="editor-body"
           value={note.content}
           onChange={event => {
-            onChange({ content: event.target.value })
-            syncSlashMenu(event.target.selectionStart)
+            const { value, selectionStart } = event.target
+            onChange({ content: value })
+            syncSlashMenu(value, selectionStart)
           }}
           onKeyDown={handleKeyDown}
-          onKeyUp={event => syncSlashMenu(event.currentTarget.selectionStart)}
-          onClick={event => syncSlashMenu(event.currentTarget.selectionStart)}
-          onSelect={event => syncSlashMenu(event.currentTarget.selectionStart)}
-          placeholder="Start writing... Type / on a new line for headings, lists, and more."
+          onKeyUp={syncSlashMenuFromTextarea}
+          onClick={syncSlashMenuFromTextarea}
+          onSelect={syncSlashMenuFromTextarea}
+          onScroll={syncSlashMenuFromTextarea}
+          placeholder="Start writing... Type / for headings, lists, and more."
           aria-label="Note content"
         />
-        {slashMenuOpen && (
-          <SlashMenu
-            commands={menuCommands}
-            selectedIndex={selectedIndex}
-            query={menuQuery}
-            position={menuPosition}
-            onSelect={selectSlashCommand}
-            onHover={setSelectedIndex}
-          />
-        )}
+        {slashMenuOpen &&
+          createPortal(
+            <SlashMenu
+              commands={menuCommands}
+              selectedIndex={selectedIndex}
+              query={menuQuery}
+              position={menuPosition}
+              onSelect={selectSlashCommand}
+              onHover={setSelectedIndex}
+            />,
+            document.body,
+          )}
       </div>
     </section>
   )
