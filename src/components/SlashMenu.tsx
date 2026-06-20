@@ -4,7 +4,6 @@ type SlashMenuProps = {
   commands: SlashCommand[]
   selectedIndex: number
   query: string
-  position: { top: number; left: number }
   onSelect: (command: SlashCommand) => void
   onHover: (index: number) => void
 }
@@ -13,21 +12,12 @@ export function SlashMenu({
   commands,
   selectedIndex,
   query,
-  position,
   onSelect,
   onHover,
 }: SlashMenuProps) {
-  const top = Math.min(Math.max(position.top, 16), window.innerHeight - 340)
-  const left = Math.min(Math.max(position.left, 16), window.innerWidth - 336)
-
   if (commands.length === 0) {
     return (
-      <div
-        className="slash-menu"
-        style={{ top, left }}
-        role="listbox"
-        aria-label="Slash commands"
-      >
+      <div className="slash-menu" role="listbox" aria-label="Slash commands">
         <div className="slash-menu-empty">No matching commands for /{query}</div>
       </div>
     )
@@ -36,13 +26,8 @@ export function SlashMenu({
   const groups = ['Text', 'Lists'] as const
 
   return (
-    <div
-      className="slash-menu"
-      style={{ top, left }}
-      role="listbox"
-      aria-label="Slash commands"
-    >
-      <div className="slash-menu-header">Blocks</div>
+    <div className="slash-menu" role="listbox" aria-label="Slash commands">
+      <div className="slash-menu-header">Type to filter · Enter to select</div>
       {groups.map(group => {
         const groupCommands = commands.filter(command => command.group === group)
         if (groupCommands.length === 0) return null

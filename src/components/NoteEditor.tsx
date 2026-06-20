@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import type { Page } from '../types/note'
-import { getTextareaCaretRect } from '../utils/caretPosition'
 import {
   applySlashCommand,
   filterSlashCommands,
@@ -18,43 +16,41 @@ type NoteEditorProps = {
 
 export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const menuOpenRef = useRef(false)
   const [menuCommands, setMenuCommands] = useState<SlashCommand[]>([])
   const [menuQuery, setMenuQuery] = useState('')
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [slashMenuOpen, setSlashMenuOpen] = useState(false)
-  const slashStateRef = useRef<ReturnType<typeof getSlashMenuState>>(null)
 
   useEffect(() => {
     closeSlashMenu()
   }, [note.id])
 
   function closeSlashMenu() {
-    slashStateRef.current = null
+    menuOpenRef.current = false
     setSlashMenuOpen(false)
     setMenuCommands([])
     setMenuQuery('')
     setSelectedIndex(0)
   }
 
-  function syncSlashMenu(content: string, cursor: number) {
-    const textarea = bodyRef.current
-    if (!textarea) return
-
+  function openSlashMenu(content: string, cursor: number) {
     const state = getSlashMenuState(content, cursor)
-    slashStateRef.current = state
-
     if (!state) {
       closeSlashMenu()
       return
     }
 
     const commands = filterSlashCommands(state.query)
+    menuOpenRef.current = true
     setSlashMenuOpen(true)
     setMenuCommands(commands)
     setMenuQuery(state.query)
     setSelectedIndex(current => (current < commands.length ? current : 0))
-    setMenuPosition(getTextareaCaretRect(textarea, state.cursor))
+  }
+
+  function syncSlashMenu(content: string, cursor: number) {
+    openSlashMenu(content, cursor)
   }
 
   function syncSlashMenuFromTextarea() {
@@ -65,8 +61,10 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
 
   function selectSlashCommand(command: SlashCommand) {
     const textarea = bodyRef.current
-    const state = slashStateRef.current
-    if (!textarea || !state) return
+    if (!textarea) return
+
+    const state = getSlashMenuState(textarea.value, textarea.selectionStart)
+    if (!state) return
 
     const result = applySlashCommand(textarea.value, state, command)
     onChange({ content: result.content })
@@ -79,7 +77,24 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (!slashMenuOpen) return
+    const textarea = event.currentTarget
+
+    if (
+      !menuOpenRef.current &&
+      event.key === '/' &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
+      const { selectionStart, selectionEnd, value } = textarea
+      const nextValue =
+        value.slice(0, selectionStart) + '/' + value.slice(selectionEnd)
+      requestAnimationFrame(() => {
+        openSlashMenu(nextValue, selectionStart + 1)
+      })
+    }
+
+    if (!menuOpenRef.current) return
 
     if (menuCommands.length === 0) {
       if (event.key === 'Escape') {
@@ -145,23 +160,22 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
           onKeyUp={syncSlashMenuFromTextarea}
           onClick={syncSlashMenuFromTextarea}
           onSelect={syncSlashMenuFromTextarea}
-          onScroll={syncSlashMenuFromTextarea}
           placeholder="Start writing... Type / for headings, lists, and more."
           aria-label="Note content"
         />
-        {slashMenuOpen &&
-          createPortal(
-            <SlashMenu
-              commands={menuCommands}
-              selectedIndex={selectedIndex}
-              query={menuQuery}
-              position={menuPosition}
-              onSelect={selectSlashCommand}
-              onHover={setSelectedIndex}
-            />,
-            document.body,
-          )}
+        {slashMenuOpen && (
+          <SlashMenu
+            commands={menuCommands}
+            selectedIndex={selectedIndex}
+            query={menuQuery}
+            onSelect={selectSlashCommand}
+            onHover={setSelectedIndex}
+          />
+        )}
       </div>
+      <p className="editor-storage-hint">
+        Notes are saved in this browser only (not on the server yet).
+      </p>
     </section>
   )
 }
