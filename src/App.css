@@ -166,36 +166,11 @@
   outline: none;
 }
 
-.editor-format-toolbar {
+.editor-body-wrap {
+  position: relative;
+  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.editor-format-label {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.editor-format-select {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.4rem 0.65rem;
-  background: var(--panel);
-  color: var(--text);
-  font-size: 0.875rem;
-}
-
-.editor-format-buttons {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.editor-format-btn {
-  min-width: 2.4rem;
-  padding-inline: 0.55rem;
+  min-height: 320px;
 }
 
 .editor-body {
@@ -209,6 +184,89 @@
   line-height: 1.6;
   color: var(--text);
   outline: none;
+}
+
+.slash-menu {
+  position: fixed;
+  z-index: 30;
+  width: min(320px, calc(100vw - 2rem));
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  padding: 0.35rem;
+}
+
+.slash-menu-header {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.45rem 0.55rem 0.25rem;
+}
+
+.slash-menu-group-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0.35rem 0.55rem 0.15rem;
+}
+
+.slash-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  cursor: pointer;
+}
+
+.slash-menu-item.is-selected,
+.slash-menu-item:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.slash-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.16);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.slash-menu-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.slash-menu-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.slash-menu-description {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.slash-menu-empty {
+  padding: 0.75rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .btn-primary,

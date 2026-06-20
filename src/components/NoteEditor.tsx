@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Page } from '../types/note'
+import { getTextareaCaretRect } from '../utils/caretPosition'
 import {
-  applyHeadingAtCursor,
-  currentHeadingAtCursor,
-  type HeadingLevel,
-} from '../utils/heading'
-import {
-  applyListAtCursor,
-  currentListAtCursor,
-  LIST_OPTIONS,
-  type ListType,
-} from '../utils/list'
+  applySlashCommand,
+  filterSlashCommands,
+  getSlashMenuState,
+  type SlashCommand,
+} from '../utils/slashCommands'
+import { SlashMenu } from './SlashMenu'
 
 type NoteEditorProps = {
   note: Page
@@ -18,39 +15,55 @@ type NoteEditorProps = {
   onDelete: () => void
 }
 
-const HEADING_OPTIONS: { level: HeadingLevel; label: string }[] = [
-  { level: 0, label: 'Normal text' },
-  { level: 1, label: 'Heading 1' },
-  { level: 2, label: 'Heading 2' },
-  { level: 3, label: 'Heading 3' },
-]
-
 export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
-  const [activeHeading, setActiveHeading] = useState<HeadingLevel>(0)
-  const [activeList, setActiveList] = useState<ListType>(0)
+  const [menuCommands, setMenuCommands] = useState<SlashCommand[]>([])
+  const [menuQuery, setMenuQuery] = useState('')
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [slashMenuOpen, setSlashMenuOpen] = useState(false)
+  const slashStateRef = useRef<ReturnType<typeof getSlashMenuState>>(null)
 
   useEffect(() => {
-    setActiveHeading(0)
-    setActiveList(0)
+    closeSlashMenu()
   }, [note.id])
 
-  function syncFormatFromCursor() {
-    const textarea = bodyRef.current
-    if (!textarea) return
-    setActiveHeading(currentHeadingAtCursor(note.content, textarea.selectionStart))
-    setActiveList(currentListAtCursor(note.content, textarea.selectionStart))
+  function closeSlashMenu() {
+    slashStateRef.current = null
+    setSlashMenuOpen(false)
+    setMenuCommands([])
+    setMenuQuery('')
+    setSelectedIndex(0)
   }
 
-  function applyHeading(level: HeadingLevel) {
+  function syncSlashMenu(cursor = bodyRef.current?.selectionStart ?? 0) {
     const textarea = bodyRef.current
     if (!textarea) return
 
-    const cursor = textarea.selectionStart
-    const result = applyHeadingAtCursor(note.content, cursor, level)
+    const state = getSlashMenuState(note.content, cursor)
+    slashStateRef.current = state
+
+    if (!state) {
+      closeSlashMenu()
+      return
+    }
+
+    const commands = filterSlashCommands(state.query)
+    setSlashMenuOpen(true)
+    setMenuCommands(commands)
+    setMenuQuery(state.query)
+    setSelectedIndex(current => (current < commands.length ? current : 0))
+    setMenuPosition(getTextareaCaretRect(textarea, state.slashStart))
+  }
+
+  function selectSlashCommand(command: SlashCommand) {
+    const textarea = bodyRef.current
+    const state = slashStateRef.current
+    if (!textarea || !state) return
+
+    const result = applySlashCommand(note.content, state, command)
     onChange({ content: result.content })
-    setActiveHeading(level)
-    setActiveList(currentListAtCursor(result.content, result.cursor))
+    closeSlashMenu()
 
     requestAnimationFrame(() => {
       textarea.focus()
@@ -58,20 +71,40 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
     })
   }
 
-  function applyList(type: ListType) {
-    const textarea = bodyRef.current
-    if (!textarea) return
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!slashMenuOpen) return
 
-    const cursor = textarea.selectionStart
-    const result = applyListAtCursor(note.content, cursor, type)
-    onChange({ content: result.content })
-    setActiveList(type)
-    setActiveHeading(currentHeadingAtCursor(result.content, result.cursor))
+    if (menuCommands.length === 0) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeSlashMenu()
+      }
+      return
+    }
 
-    requestAnimationFrame(() => {
-      textarea.focus()
-      textarea.setSelectionRange(result.cursor, result.cursor)
-    })
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setSelectedIndex(current => (current + 1) % menuCommands.length)
+      return
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setSelectedIndex(current => (current - 1 + menuCommands.length) % menuCommands.length)
+      return
+    }
+
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault()
+      const command = menuCommands[selectedIndex]
+      if (command) selectSlashCommand(command)
+      return
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeSlashMenu()
+    }
   }
 
   return (
@@ -91,76 +124,33 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
         placeholder="Untitled"
         aria-label="Note title"
       />
-      <div className="editor-format-toolbar">
-        <label className="editor-format-label" htmlFor={`heading-format-${note.id}`}>
-          Text format
-        </label>
-        <select
-          id={`heading-format-${note.id}`}
-          className="editor-format-select"
-          value={activeHeading}
-          onChange={event => applyHeading(Number(event.target.value) as HeadingLevel)}
-        >
-          {HEADING_OPTIONS.map(option => (
-            <option key={option.level} value={option.level}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <div className="editor-format-buttons" role="group" aria-label="Heading format">
-          {HEADING_OPTIONS.filter(option => option.level > 0).map(option => (
-            <button
-              key={option.level}
-              type="button"
-              className="btn-secondary btn-inline editor-format-btn"
-              onClick={() => applyHeading(option.level)}
-            >
-              H{option.level}
-            </button>
-          ))}
-        </div>
+      <div className="editor-body-wrap">
+        <textarea
+          ref={bodyRef}
+          className="editor-body"
+          value={note.content}
+          onChange={event => {
+            onChange({ content: event.target.value })
+            syncSlashMenu(event.target.selectionStart)
+          }}
+          onKeyDown={handleKeyDown}
+          onKeyUp={event => syncSlashMenu(event.currentTarget.selectionStart)}
+          onClick={event => syncSlashMenu(event.currentTarget.selectionStart)}
+          onSelect={event => syncSlashMenu(event.currentTarget.selectionStart)}
+          placeholder="Start writing... Type / on a new line for headings, lists, and more."
+          aria-label="Note content"
+        />
+        {slashMenuOpen && (
+          <SlashMenu
+            commands={menuCommands}
+            selectedIndex={selectedIndex}
+            query={menuQuery}
+            position={menuPosition}
+            onSelect={selectSlashCommand}
+            onHover={setSelectedIndex}
+          />
+        )}
       </div>
-      <div className="editor-format-toolbar">
-        <label className="editor-format-label" htmlFor={`list-format-${note.id}`}>
-          List format
-        </label>
-        <select
-          id={`list-format-${note.id}`}
-          className="editor-format-select"
-          value={activeList}
-          onChange={event => applyList(Number(event.target.value) as ListType)}
-        >
-          {LIST_OPTIONS.map(option => (
-            <option key={option.type} value={option.type}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <div className="editor-format-buttons" role="group" aria-label="List format">
-          {LIST_OPTIONS.filter(option => option.type > 0).map(option => (
-            <button
-              key={option.type}
-              type="button"
-              className="btn-secondary btn-inline editor-format-btn"
-              title={option.label}
-              onClick={() => applyList(option.type)}
-            >
-              {option.short}
-            </button>
-          ))}
-        </div>
-      </div>
-      <textarea
-        ref={bodyRef}
-        className="editor-body"
-        value={note.content}
-        onChange={e => onChange({ content: e.target.value })}
-        onKeyUp={syncFormatFromCursor}
-        onClick={syncFormatFromCursor}
-        onSelect={syncFormatFromCursor}
-        placeholder="Start writing..."
-        aria-label="Note content"
-      />
     </section>
   )
 }
