@@ -5,7 +5,7 @@ import {
   redisGetJson,
   redisSetJson,
   type WorkspaceRecord,
-} from './types'
+} from './types.js'
 
 const WORKSPACE_KEY = 'notes_hub:workspace'
 

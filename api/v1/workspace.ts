@@ -1,6 +1,6 @@
-import { requireWorkspaceAuth } from '../../lib/workspace-api/auth'
-import type { WorkspaceRecord } from '../../lib/workspace-api/types'
-import { loadWorkspace, updateWorkspace } from '../../lib/workspace-api/workspaceStore'
+import { requireWorkspaceAuth } from '../_lib/auth.js'
+import type { WorkspaceRecord } from '../_lib/types.js'
+import { loadWorkspace, updateWorkspace } from '../_lib/workspaceStore.js'
 
 export default async function handler(request: Request) {
   try {

@@ -35,10 +35,6 @@ export function getRedisRestConfig(): { url: string; token: string } | null {
   return { url: url.replace(/\/$/, ''), token }
 }
 
-export function hasRedisEnv(): boolean {
-  return getRedisRestConfig() !== null
-}
-
 type RedisCommandResponse = {
   result?: unknown
   error?: string
