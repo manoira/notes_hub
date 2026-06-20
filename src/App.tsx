@@ -1,10 +1,16 @@
+import { useEffect } from 'react'
 import { LinkPreview } from './components/LinkPreview'
 import { NoteEditor } from './components/NoteEditor'
 import { Sidebar } from './components/Sidebar'
+import { APP_VERSION } from './buildInfo'
 import { useNotes } from './hooks/useNotes'
 import './App.css'
 
 function App() {
+  useEffect(() => {
+    document.title = `Notes Hub · ${APP_VERSION}`
+  }, [])
+
   const {
     items,
     activeItem,

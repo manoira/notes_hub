@@ -8,6 +8,7 @@ import {
   filterSlashCommands,
   getSlashMenuState,
   type SlashCommand,
+  type SlashMenuState,
 } from '../utils/slashCommands'
 import { SlashMenu } from './SlashMenu'
 
@@ -20,14 +21,15 @@ type NoteEditorProps = {
 export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const [cursor, setCursor] = useState(0)
+  const [slashState, setSlashState] = useState<SlashMenuState | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 360 })
 
-  const slashState = getSlashMenuState(note.content, cursor)
   const menuCommands = slashState ? filterSlashCommands(slashState.query) : []
 
   useEffect(() => {
     setCursor(0)
+    setSlashState(null)
     setSelectedIndex(0)
   }, [note.id])
 
@@ -41,16 +43,19 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
     setMenuPosition(getTextareaAnchorRect(textarea))
   }, [slashState, note.content, cursor])
 
-  function updateCursor(textarea: HTMLTextAreaElement) {
-    setCursor(textarea.selectionStart)
+  function syncSlashFromTextarea(textarea: HTMLTextAreaElement) {
+    const position = textarea.selectionStart
+    setCursor(position)
+    setSlashState(getSlashMenuState(textarea.value, position))
   }
 
   function selectSlashCommand(command: SlashCommand) {
     const textarea = bodyRef.current
     if (!textarea || !slashState) return
 
-    const result = applySlashCommand(note.content, slashState, command)
+    const result = applySlashCommand(textarea.value, slashState, command)
     onChange({ content: result.content })
+    setSlashState(null)
 
     requestAnimationFrame(() => {
       textarea.focus()
@@ -68,6 +73,7 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
     if (commands.length === 0) {
       if (event.key === 'Escape') {
         event.preventDefault()
+        setSlashState(null)
         setCursor(state.slashStart)
       }
       return
@@ -94,6 +100,7 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
 
     if (event.key === 'Escape') {
       event.preventDefault()
+      setSlashState(null)
       setCursor(state.slashStart)
     }
   }
@@ -121,14 +128,14 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
           className="editor-body"
           value={note.content}
           onChange={event => {
-            const { value, selectionStart } = event.target
-            onChange({ content: value })
-            setCursor(selectionStart)
+            const textarea = event.currentTarget
+            onChange({ content: textarea.value })
+            syncSlashFromTextarea(textarea)
           }}
           onKeyDown={handleKeyDown}
-          onKeyUp={event => updateCursor(event.currentTarget)}
-          onClick={event => updateCursor(event.currentTarget)}
-          onSelect={event => updateCursor(event.currentTarget)}
+          onKeyUp={event => syncSlashFromTextarea(event.currentTarget)}
+          onClick={event => syncSlashFromTextarea(event.currentTarget)}
+          onSelect={event => syncSlashFromTextarea(event.currentTarget)}
           onScroll={() => {
             const textarea = bodyRef.current
             if (textarea && slashState) {
