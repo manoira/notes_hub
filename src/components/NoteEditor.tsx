@@ -11,7 +11,6 @@ import {
 } from '../utils/slashCommands'
 import { SlashMenu } from './SlashMenu'
 
-import { APP_VERSION } from '../buildInfo'
 type NoteEditorProps = {
   note: Page
   onChange: (patch: Partial<Pick<Page, 'title' | 'content'>>) => void
