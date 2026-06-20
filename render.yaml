@@ -1,7 +1,7 @@
 # Notes Hub — Render Blueprint
 #
-# Static site on Render CDN. Auto-deploys from GitHub main.
-# API service stores workspace JSON on disk until Postgres is wired up.
+# Prefer Vercel for free API + Redis: see docs/VERCEL.md
+# This file remains for the static site on Render if you keep using it.
 
 services:
   - type: web

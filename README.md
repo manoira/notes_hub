@@ -21,7 +21,9 @@ Open http://localhost:5175/
 
 ## Cross-device sync (preparation)
 
-By default notes stay in the browser. To test cloud sync locally, see [docs/CROSS_DEVICE_SYNC.md](docs/CROSS_DEVICE_SYNC.md).
+By default notes stay in the browser. For cloud sync across devices, deploy on **Vercel** (free API + Redis): [docs/VERCEL.md](docs/VERCEL.md).
+
+See also [docs/CROSS_DEVICE_SYNC.md](docs/CROSS_DEVICE_SYNC.md).
 
 Other commands:
 

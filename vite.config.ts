@@ -4,7 +4,8 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const appVersion = process.env.VITE_APP_VERSION || 'dev'
+  const appVersion =
+    process.env.VITE_APP_VERSION || process.env.VERCEL_GIT_COMMIT_SHA || 'dev'
 
   return {
     base: env.BASE_PATH || '/',
