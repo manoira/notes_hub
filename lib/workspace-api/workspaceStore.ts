@@ -1,5 +1,5 @@
 import { Redis } from '@upstash/redis'
-import { emptyWorkspace, normalizeWorkspace, type WorkspaceRecord } from './types'
+import { emptyWorkspace, hasRedisEnv, normalizeWorkspace, type WorkspaceRecord } from './types'
 
 const WORKSPACE_KEY = 'notes_hub:workspace'
 
@@ -18,10 +18,6 @@ function createRedisClient(): Redis | null {
   }
 
   return null
-}
-
-function hasRedisConfig(): boolean {
-  return createRedisClient() !== null
 }
 
 export async function loadWorkspace(): Promise<WorkspaceRecord> {
@@ -68,5 +64,5 @@ export async function updateWorkspace(
 }
 
 export function storageBackendLabel(): 'redis' | 'memory' {
-  return hasRedisConfig() ? 'redis' : 'memory'
+  return hasRedisEnv() ? 'redis' : 'memory'
 }

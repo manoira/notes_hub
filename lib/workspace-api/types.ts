@@ -26,3 +26,10 @@ export function normalizeWorkspace(value: unknown): WorkspaceRecord {
       typeof record.updatedAt === 'string' ? record.updatedAt : new Date().toISOString(),
   }
 }
+
+export function hasRedisEnv(): boolean {
+  return Boolean(
+    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
+      (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN),
+  )
+}
