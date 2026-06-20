@@ -1,8 +1,6 @@
 name: Deploy to Websupport
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:

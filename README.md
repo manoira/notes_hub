@@ -46,64 +46,42 @@ notes_hub/
 | 5174 | media-hub      |
 | 5175 | notes_hub      |
 
-## Production (Websupport — emmyzettergren.se)
+## Production (Render — emmyzettergren.se)
 
-Auto-deploy via **GitHub Actions** → SFTP → `public_html` on every push to `main`.
+Notes Hub deployas som **static site** på Render. Varje push till `main` bygger och publicerar automatiskt.
 
-### 1. Rensa WordPress (engångs)
+### 1. Skapa tjänsten på Render (engångs)
 
-Ta backup om du vill, sedan radera WordPress-filer i `public_html` hos Websupport (eller låt första deploy göra det — workflowen ersätter allt i mappen).
+1. Gå till [dashboard.render.com](https://dashboard.render.com/)
+2. **New → Blueprint**
+3. Koppla repot **`manoira/notes_hub`**
+4. Applicera `render.yaml` — skapar static site **notes-hub**
+5. Vänta tills första deployen är klar (grön bock)
+6. Testa Render-URL:en (t.ex. `https://notes-hub-xxxx.onrender.com`)
 
-### 2. Skapa SFTP-uppgifter
+Inga secrets behövs ännu — notes sparas i webbläsaren (`localStorage`).
 
-1. Logga in på [admin.websupport.se](https://admin.websupport.se)
-2. Välj domänen **emmyzettergren.se**
-3. **Avancerad konfiguration → FTP-konton** → skapa eller öppna ett konto
-4. Notera **server** (domän eller IP), **användarnamn** och **lösenord**
-5. SFTP använder **port 22**
+### 2. Koppla domänen emmyzettergren.se
 
-### 3. Lägg in GitHub Secrets (måste du göra själv)
+I Render → **notes-hub** → **Settings** → **Custom Domains**:
 
-Jag kan inte skapa secrets åt dig — de innehåller ditt lösenord och sätts bara i GitHub:
+1. Lägg till `emmyzettergren.se` och eventuellt `www.emmyzettergren.se`
+2. Render visar vilka DNS-poster du behöver
 
-**[→ Öppna Secrets för notes_hub](https://github.com/manoira/notes_hub/settings/secrets/actions)**
+I [admin.websupport.se](https://admin.websupport.se) → **emmyzettergren.se** → **DNS**:
 
-Klicka **New repository secret** för varje rad:
+| Typ | Namn | Värde (från Render) |
+|-----|------|---------------------|
+| `CNAME` | `www` | Render-hostnamn (t.ex. `notes-hub-xxxx.onrender.com`) |
+| `A` eller `ALIAS` | `@` | Render IP (för rotdomän) |
 
-| Secret name | Värde |
-| ----------- | ----- |
-| `WEBSUPPORT_SFTP_SERVER` | Server från Websupport, t.ex. `emmyzettergren.se` eller IP-adressen de visar |
-| `WEBSUPPORT_SFTP_USERNAME` | FTP-användarnamn |
-| `WEBSUPPORT_SFTP_PASSWORD` | FTP-lösenord |
+DNS kan ta **15 min – 24 h** att slå igenom. Render aktiverar HTTPS automatiskt.
 
-Dela **aldrig** lösenordet i chat, kod eller commit.
+### 3. Framtida uppdateringar
 
-### 4. Pusha och deploya
-
-När secrets finns: varje `git push` till `main` bygger appen och laddar upp `dist/` till `/public_html/`.
-
-- Workflow: `.github/workflows/deploy-websupport.yml`
-- Manuell körning: GitHub → **Actions** → **Deploy to Websupport** → **Run workflow**
-- `.htaccess` för Apache ligger i `public/` och följer med i builden
-
-Om uppladdningen misslyckas, prova att ändra `remoteDir` i workflow-filen till `/` (vissa FTP-konton pekar redan på `public_html`).
-
-## Production (Render — alternativ)
-
-Notes Hub is a **static site** on Render (CDN). Media Hub uses a **web service** because it serves an API and database; Notes Hub only ships the Vite build until you add a backend.
-
-### One-time setup
-
-1. Push this repo to GitHub (`main` branch).
-2. In [Render Dashboard](https://dashboard.render.com/):
-   - **Option A (recommended):** **New → Blueprint** → connect `manoira/notes_hub` → apply `render.yaml`.
-   - **Option B:** **New → Static Site** → connect the repo and set:
-     - **Build command:** `npm ci && npm run build`
-     - **Publish directory:** `dist`
-     - **Rewrite rule:** `/*` → `/index.html` (Rewrite)
-3. Enable **Auto-Deploy** from `main`.
-
-No secrets are required yet — notes live in the browser (`localStorage`). When you add Neon + an API later, you will add a second Render service (like Media Hub) or extend this blueprint.
+```
+Kodändring → git push till main → Render deployar automatiskt
+```
 
 ### Config (`render.yaml`)
 
@@ -111,10 +89,10 @@ No secrets are required yet — notes live in the browser (`localStorage`). When
 | ------- | ----- |
 | Build | `npm ci && npm run build` |
 | Publish | `dist` |
-| `BASE_PATH` | `/` |
+| SPA rewrite | `/*` → `/index.html` |
 | `NODE_VERSION` | `22` |
 
-### Local production check
+### Lokal produktionstest
 
 ```powershell
 npm run build
@@ -122,6 +100,11 @@ npm run preview
 ```
 
 Open http://localhost:5175/
+
+## Production (Websupport — ersatt av Render)
+
+SFTP-deploy via GitHub Actions fungerade inte tillförlitligt (servern stängde kopplingen).
+Workflowen finns kvar för manuell körning: **Actions → Deploy to Websupport → Run workflow**.
 
 ## Repository
 

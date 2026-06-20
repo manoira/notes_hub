@@ -1,14 +1,14 @@
 # Notes Hub — Render Blueprint
 #
-# Frontend-only Vite app (static site on Render CDN).
-# Media Hub uses a web service because it runs an API + database; Notes Hub
-# only needs a static build until you add a backend (e.g. Neon).
+# Static site on Render CDN. Auto-deploys from GitHub main.
+# Media Hub uses a web service (API + DB); add a second service here when Neon arrives.
 
 services:
   - type: web
     name: notes-hub
     runtime: static
     plan: free
+    branch: main
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
