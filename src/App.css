@@ -61,20 +61,77 @@
 .note-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  padding: 0.5rem 0.35rem;
 }
 
-.sidebar-build {
-  margin: 0;
-  padding: 0.65rem 1rem 0.85rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.72rem;
-  font-weight: 600;
+.note-tree-branch {
+  display: flex;
+  flex-direction: column;
+}
+
+.note-tree-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.note-tree-row:hover .note-tree-actions {
+  opacity: 1;
+}
+
+.note-tree-toggle,
+.note-tree-toggle-spacer {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-top: 0.45rem;
+}
+
+.note-tree-toggle {
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  padding: 0;
+}
+
+.note-tree-toggle:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  .note-tree-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.note-tree-actions {
+  display: flex;
+  gap: 0.15rem;
+  margin-top: 0.4rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.note-tree-action {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.note-tree-action:hover {
   color: var(--accent);
-  letter-spacing: 0.02em;
+  border-color: var(--accent);
 }
 
 .note-item {
@@ -82,8 +139,9 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.15rem;
-  width: 100%;
-  padding: 0.6rem 0.75rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.5rem;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -137,6 +195,16 @@
   color: var(--muted);
 }
 
+.sidebar-build {
+  margin: 0;
+  padding: 0.65rem 1rem 0.85rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
 .editor {
   flex: 1;
   display: flex;
@@ -174,6 +242,107 @@
   color: var(--text);
   margin-bottom: 1rem;
   outline: none;
+}
+
+.page-link-bookmarks {
+  margin-bottom: 1.25rem;
+}
+
+.page-link-bookmarks-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.link-bookmark {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 220px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+  padding: 0;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.link-bookmark:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.link-bookmark-preview {
+  position: relative;
+  height: 120px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.12);
+  border-bottom: 1px solid var(--border);
+}
+
+.link-bookmark-iframe {
+  width: 200%;
+  height: 200%;
+  border: none;
+  pointer-events: none;
+  transform: scale(0.5);
+  transform-origin: top left;
+  background: white;
+}
+
+.link-bookmark-fallback {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--muted);
+}
+
+.link-bookmark-fallback-icon {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.link-bookmark-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.65rem 0.75rem 0.75rem;
+  min-width: 0;
+}
+
+.link-bookmark-icon {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--accent);
+  margin-top: 0.1rem;
+}
+
+.link-bookmark-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.link-bookmark-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-bookmark-host {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .editor-body-wrap {

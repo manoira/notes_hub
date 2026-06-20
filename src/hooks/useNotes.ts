@@ -1,28 +1,35 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Note, Page, SidebarItem, SmartLink } from '../types/note'
+import { collectDescendantIds, isValidParentId } from '../utils/tree'
 import { normalizeUrl, titleFromUrl } from '../utils/url'
 
 const STORAGE_KEY = 'notes_hub_v2'
 const LEGACY_STORAGE_KEY = 'notes_hub_v1'
 
-function createPage(title = 'Untitled'): Page {
+function createPage(title = 'Untitled', parentId: string | null = null): Page {
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),
     kind: 'page',
     title,
     content: '',
+    parentId,
     updatedAt: now,
   }
 }
 
-function createLink(url: string, title?: string): SmartLink {
+function createLink(
+  url: string,
+  title?: string,
+  parentId: string | null = null,
+): SmartLink {
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),
     kind: 'link',
     title: title?.trim() || titleFromUrl(url),
     url,
+    parentId,
     updatedAt: now,
   }
 }
@@ -41,7 +48,15 @@ function seedItems(): SidebarItem[] {
 }
 
 function toPage(note: Note): Page {
-  return { ...note, kind: 'page' }
+  return {
+    ...note,
+    kind: 'page',
+    parentId: note.parentId ?? null,
+  }
+}
+
+function withParentId(item: SidebarItem): SidebarItem {
+  return { ...item, parentId: item.parentId ?? null }
 }
 
 function isValidItem(item: unknown): item is SidebarItem {
@@ -49,6 +64,13 @@ function isValidItem(item: unknown): item is SidebarItem {
   const record = item as SidebarItem
   if (typeof record.id !== 'string' || typeof record.title !== 'string') return false
   if (typeof record.updatedAt !== 'string') return false
+  if (
+    record.parentId !== null &&
+    record.parentId !== undefined &&
+    typeof record.parentId !== 'string'
+  ) {
+    return false
+  }
 
   if (record.kind === 'page') {
     return typeof record.content === 'string'
@@ -59,6 +81,18 @@ function isValidItem(item: unknown): item is SidebarItem {
   }
 
   return false
+}
+
+function normalizeItems(items: SidebarItem[]): SidebarItem[] {
+  const withParents = items.map(withParentId)
+  const ids = new Set(withParents.map(item => item.id))
+
+  return withParents.map(item => {
+    if (item.parentId && !ids.has(item.parentId)) {
+      return { ...item, parentId: null }
+    }
+    return item
+  })
 }
 
 function loadLegacyState(): { items: SidebarItem[]; activeId: string | null } | null {
@@ -93,7 +127,9 @@ function loadState(): { items: SidebarItem[]; activeId: string | null } {
     }
 
     const parsed = JSON.parse(raw) as { items: SidebarItem[]; activeId: string | null }
-    const items = Array.isArray(parsed.items) ? parsed.items.filter(isValidItem) : []
+    const items = normalizeItems(
+      Array.isArray(parsed.items) ? parsed.items.filter(isValidItem) : [],
+    )
 
     if (items.length === 0) {
       const seeded = seedItems()
@@ -126,21 +162,30 @@ export function useNotes() {
     setActiveId(id)
   }, [])
 
-  const addPage = useCallback(() => {
-    const page = createPage()
-    setItems(prev => [page, ...prev])
-    setActiveId(page.id)
-  }, [])
+  const addPage = useCallback(
+    (parentId: string | null = null) => {
+      if (!isValidParentId(items, parentId)) return null
 
-  const addLink = useCallback((rawUrl: string, title?: string) => {
-    const url = normalizeUrl(rawUrl)
-    if (!url) return false
+      const page = createPage('Untitled', parentId)
+      setItems(prev => [page, ...prev])
+      setActiveId(page.id)
+      return page.id
+    },
+    [items],
+  )
 
-    const link = createLink(url, title)
-    setItems(prev => [link, ...prev])
-    setActiveId(link.id)
-    return true
-  }, [])
+  const addLink = useCallback(
+    (rawUrl: string, title?: string, parentId: string | null = null) => {
+      const url = normalizeUrl(rawUrl)
+      if (!url || !isValidParentId(items, parentId)) return false
+
+      const link = createLink(url, title, parentId)
+      setItems(prev => [link, ...prev])
+      setActiveId(link.id)
+      return true
+    },
+    [items],
+  )
 
   const updatePage = useCallback((id: string, patch: Partial<Pick<Page, 'title' | 'content'>>) => {
     setItems(prev =>
@@ -172,7 +217,9 @@ export function useNotes() {
 
   const deleteItem = useCallback((id: string) => {
     setItems(prev => {
-      const next = prev.filter(item => item.id !== id)
+      const removeIds = collectDescendantIds(prev, id)
+      const next = prev.filter(item => !removeIds.has(item.id))
+
       if (next.length === 0) {
         const page = createPage()
         setActiveId(page.id)
@@ -180,7 +227,7 @@ export function useNotes() {
       }
 
       setActiveId(current => {
-        if (current !== id) return current
+        if (!current || !removeIds.has(current)) return current
         return next[0]?.id ?? null
       })
 

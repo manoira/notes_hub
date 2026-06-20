@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Page } from '../types/note'
+import type { Page, SmartLink } from '../types/note'
 import { APP_VERSION } from '../buildInfo'
 import { getTextareaCaretRect } from '../utils/caretPosition'
 import {
@@ -10,15 +10,24 @@ import {
   type SlashCommand,
   type SlashMenuState,
 } from '../utils/slashCommands'
+import { PageLinkBookmarks } from './PageLinkBookmarks'
 import { SlashMenu } from './SlashMenu'
 
 type NoteEditorProps = {
   note: Page
+  childLinks?: SmartLink[]
+  onSelectLink?: (id: string) => void
   onChange: (patch: Partial<Pick<Page, 'title' | 'content'>>) => void
   onDelete: () => void
 }
 
-export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
+export function NoteEditor({
+  note,
+  childLinks = [],
+  onSelectLink,
+  onChange,
+  onDelete,
+}: NoteEditorProps) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const [cursor, setCursor] = useState(0)
   const [slashState, setSlashState] = useState<SlashMenuState | null>(null)
@@ -122,6 +131,9 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
         placeholder="Untitled"
         aria-label="Note title"
       />
+      {onSelectLink ? (
+        <PageLinkBookmarks links={childLinks} onSelectLink={onSelectLink} />
+      ) : null}
       <div className="editor-body-wrap">
         <textarea
           ref={bodyRef}

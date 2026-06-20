@@ -4,6 +4,7 @@ import { NoteEditor } from './components/NoteEditor'
 import { Sidebar } from './components/Sidebar'
 import { APP_VERSION } from './buildInfo'
 import { useNotes } from './hooks/useNotes'
+import { getChildLinks } from './utils/tree'
 import './App.css'
 
 function App() {
@@ -36,6 +37,8 @@ function App() {
         <NoteEditor
           key={activeItem.id}
           note={activeItem}
+          childLinks={getChildLinks(items, activeItem.id)}
+          onSelectLink={selectItem}
           onChange={patch => updatePage(activeItem.id, patch)}
           onDelete={() => deleteItem(activeItem.id)}
         />

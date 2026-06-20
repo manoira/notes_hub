@@ -1,17 +1,18 @@
-export type Page = {
+export type SidebarItemBase = {
   id: string
-  kind: 'page'
   title: string
-  content: string
   updatedAt: string
+  parentId: string | null
 }
 
-export type SmartLink = {
-  id: string
+export type Page = SidebarItemBase & {
+  kind: 'page'
+  content: string
+}
+
+export type SmartLink = SidebarItemBase & {
   kind: 'link'
-  title: string
   url: string
-  updatedAt: string
 }
 
 export type SidebarItem = Page | SmartLink
@@ -22,4 +23,4 @@ export type WorkspaceState = {
 }
 
 /** @deprecated Use Page — kept for migration from older saves */
-export type Note = Omit<Page, 'kind'>
+export type Note = Omit<Page, 'kind' | 'parentId'> & { parentId?: string | null }

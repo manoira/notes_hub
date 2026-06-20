@@ -1,35 +1,35 @@
 import { useState } from 'react'
 import { APP_VERSION } from '../buildInfo'
 import type { SidebarItem } from '../types/note'
-import { hostnameFromUrl } from '../utils/url'
 import { AddLinkDialog } from './AddLinkDialog'
+import { SidebarTree } from './SidebarTree'
 
 type SidebarProps = {
   items: SidebarItem[]
   activeId: string | null
   onSelect: (id: string) => void
-  onAddPage: () => void
-  onAddLink: (url: string, title?: string) => boolean
+  onAddPage: (parentId?: string | null) => void
+  onAddLink: (url: string, title?: string, parentId?: string | null) => boolean
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function itemSubtitle(item: SidebarItem) {
-  if (item.kind === 'link') return hostnameFromUrl(item.url)
-  return formatDate(item.updatedAt)
-}
-
-export function Sidebar({ items, activeId, onSelect, onAddPage, onAddLink }: SidebarProps) {
+export function Sidebar({
+  items,
+  activeId,
+  onSelect,
+  onAddPage,
+  onAddLink,
+}: SidebarProps) {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [linkParentId, setLinkParentId] = useState<string | null>(null)
 
-  const sorted = [...items].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  )
+  function openLinkDialog(parentId: string | null) {
+    setLinkParentId(parentId)
+    setLinkDialogOpen(true)
+  }
+
+  function handleAddLink(parentId: string | null) {
+    openLinkDialog(parentId)
+  }
 
   return (
     <>
@@ -37,45 +37,44 @@ export function Sidebar({ items, activeId, onSelect, onAddPage, onAddLink }: Sid
         <div className="sidebar-header">
           <h1>Notes Hub</h1>
           <div className="sidebar-actions">
-            <button type="button" className="btn-primary" onClick={onAddPage}>
+            <button type="button" className="btn-primary" onClick={() => onAddPage(null)}>
               + New page
             </button>
             <button
               type="button"
               className="btn-secondary btn-inline"
-              onClick={() => setLinkDialogOpen(true)}
+              onClick={() => openLinkDialog(null)}
             >
               + Smart link
             </button>
           </div>
         </div>
         <nav className="note-list" aria-label="Pages and links">
-          {sorted.map(item => (
-            <button
-              key={item.id}
-              type="button"
-              className={`note-item${item.id === activeId ? ' active' : ''}${item.kind === 'link' ? ' note-item-link' : ''}`}
-              onClick={() => onSelect(item.id)}
-            >
-              <span className="note-item-row">
-                {item.kind === 'link' ? (
-                  <span className="note-item-icon" aria-hidden="true">
-                    ↗
-                  </span>
-                ) : null}
-                <span className="note-item-title">{item.title || 'Untitled'}</span>
-              </span>
-              <span className="note-item-date">{itemSubtitle(item)}</span>
-            </button>
-          ))}
+          <SidebarTree
+            items={items}
+            activeId={activeId}
+            onSelect={onSelect}
+            onAddPage={onAddPage}
+            onAddLink={handleAddLink}
+          />
         </nav>
         <p className="sidebar-build">Build {APP_VERSION}</p>
       </aside>
 
       <AddLinkDialog
         open={linkDialogOpen}
-        onClose={() => setLinkDialogOpen(false)}
-        onAdd={onAddLink}
+        onClose={() => {
+          setLinkDialogOpen(false)
+          setLinkParentId(null)
+        }}
+        onAdd={(url, title) => {
+          const ok = onAddLink(url, title, linkParentId)
+          if (ok) {
+            setLinkDialogOpen(false)
+            setLinkParentId(null)
+          }
+          return ok
+        }}
       />
     </>
   )
