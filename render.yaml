@@ -7,7 +7,6 @@ services:
   - type: web
     name: notes-hub
     runtime: static
-    plan: free
     branch: main
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
