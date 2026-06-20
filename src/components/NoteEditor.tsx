@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Page } from '../types/note'
+import { APP_VERSION } from '../buildInfo'
 import { getTextareaAnchorRect } from '../utils/caretPosition'
 import {
   applySlashCommand,
@@ -10,8 +11,7 @@ import {
 } from '../utils/slashCommands'
 import { SlashMenu } from './SlashMenu'
 
-declare const __APP_VERSION__: string
-
+import { APP_VERSION } from '../buildInfo'
 type NoteEditorProps = {
   note: Page
   onChange: (patch: Partial<Pick<Page, 'title' | 'content'>>) => void
@@ -103,8 +103,7 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
     <section className="editor">
       <div className="editor-toolbar">
         <span className="editor-meta">
-          Last edited {new Date(note.updatedAt).toLocaleString()} · build{' '}
-          {__APP_VERSION__.slice(0, 7)}
+          Last edited {new Date(note.updatedAt).toLocaleString()} · build {APP_VERSION}
         </span>
         <button type="button" className="btn-danger" onClick={onDelete}>
           Delete

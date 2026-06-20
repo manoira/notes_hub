@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { APP_VERSION } from '../buildInfo'
 import type { SidebarItem } from '../types/note'
 import { hostnameFromUrl } from '../utils/url'
 import { AddLinkDialog } from './AddLinkDialog'
@@ -68,6 +69,7 @@ export function Sidebar({ items, activeId, onSelect, onAddPage, onAddLink }: Sid
             </button>
           ))}
         </nav>
+        <p className="sidebar-build">Build {APP_VERSION}</p>
       </aside>
 
       <AddLinkDialog

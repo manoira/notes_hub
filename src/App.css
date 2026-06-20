@@ -67,6 +67,16 @@
   gap: 0.25rem;
 }
 
+.sidebar-build {
+  margin: 0;
+  padding: 0.65rem 1rem 0.85rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
 .note-item {
   display: flex;
   flex-direction: column;
