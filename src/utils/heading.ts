@@ -1,3 +1,5 @@
+import { stripHeadingPrefix, stripListPrefix } from './linePrefix'
+
 export type HeadingLevel = 0 | 1 | 2 | 3
 
 const HEADING_PREFIX: Record<Exclude<HeadingLevel, 0>, string> = {
@@ -13,15 +15,10 @@ export function headingFromLine(line: string): HeadingLevel {
   return 0
 }
 
-export function stripHeadingPrefix(line: string): string {
-  if (line.startsWith('### ')) return line.slice(4)
-  if (line.startsWith('## ')) return line.slice(3)
-  if (line.startsWith('# ')) return line.slice(2)
-  return line
-}
+export { stripHeadingPrefix } from './linePrefix'
 
 export function applyHeadingToLine(line: string, level: HeadingLevel): string {
-  const text = stripHeadingPrefix(line)
+  const text = stripHeadingPrefix(stripListPrefix(line))
   if (level === 0) return text
   return `${HEADING_PREFIX[level]}${text}`
 }
