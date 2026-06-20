@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
   return {
     base: env.BASE_PATH || '/',
     plugins: [react()],
+    define: {
+      __APP_VERSION__: JSON.stringify(process.env.VITE_APP_VERSION || 'dev'),
+    },
     server: {
       port: 5175,
       strictPort: false,

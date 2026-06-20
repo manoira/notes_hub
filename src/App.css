@@ -188,19 +188,20 @@
   outline: none;
 }
 
+.slash-menu-portal {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
 .slash-menu {
-  position: absolute;
-  left: 0;
-  bottom: 0.75rem;
-  z-index: 20;
-  width: min(360px, 100%);
+  width: 100%;
   max-height: min(280px, 45vh);
   overflow-y: auto;
-  margin-top: 0;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--panel);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22);
   padding: 0.35rem;
 }
 

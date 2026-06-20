@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Page } from '../types/note'
+import { getTextareaAnchorRect } from '../utils/caretPosition'
 import {
   applySlashCommand,
   filterSlashCommands,
@@ -7,6 +9,8 @@ import {
   type SlashCommand,
 } from '../utils/slashCommands'
 import { SlashMenu } from './SlashMenu'
+
+declare const __APP_VERSION__: string
 
 type NoteEditorProps = {
   note: Page
@@ -16,116 +20,82 @@ type NoteEditorProps = {
 
 export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
-  const menuOpenRef = useRef(false)
-  const [menuCommands, setMenuCommands] = useState<SlashCommand[]>([])
-  const [menuQuery, setMenuQuery] = useState('')
+  const [cursor, setCursor] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [slashMenuOpen, setSlashMenuOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 360 })
+
+  const slashState = getSlashMenuState(note.content, cursor)
+  const menuCommands = slashState ? filterSlashCommands(slashState.query) : []
 
   useEffect(() => {
-    closeSlashMenu()
+    setCursor(0)
+    setSelectedIndex(0)
   }, [note.id])
 
-  function closeSlashMenu() {
-    menuOpenRef.current = false
-    setSlashMenuOpen(false)
-    setMenuCommands([])
-    setMenuQuery('')
-    setSelectedIndex(0)
-  }
+  useEffect(() => {
+    setSelectedIndex(current => (current < menuCommands.length ? current : 0))
+  }, [menuCommands.length, slashState?.query])
 
-  function openSlashMenu(content: string, cursor: number) {
-    const state = getSlashMenuState(content, cursor)
-    if (!state) {
-      closeSlashMenu()
-      return
-    }
-
-    const commands = filterSlashCommands(state.query)
-    menuOpenRef.current = true
-    setSlashMenuOpen(true)
-    setMenuCommands(commands)
-    setMenuQuery(state.query)
-    setSelectedIndex(current => (current < commands.length ? current : 0))
-  }
-
-  function syncSlashMenu(content: string, cursor: number) {
-    openSlashMenu(content, cursor)
-  }
-
-  function syncSlashMenuFromTextarea() {
+  useLayoutEffect(() => {
     const textarea = bodyRef.current
-    if (!textarea) return
-    syncSlashMenu(textarea.value, textarea.selectionStart)
+    if (!slashState || !textarea) return
+    setMenuPosition(getTextareaAnchorRect(textarea))
+  }, [slashState, note.content, cursor])
+
+  function updateCursor(textarea: HTMLTextAreaElement) {
+    setCursor(textarea.selectionStart)
   }
 
   function selectSlashCommand(command: SlashCommand) {
     const textarea = bodyRef.current
-    if (!textarea) return
+    if (!textarea || !slashState) return
 
-    const state = getSlashMenuState(textarea.value, textarea.selectionStart)
-    if (!state) return
-
-    const result = applySlashCommand(textarea.value, state, command)
+    const result = applySlashCommand(note.content, slashState, command)
     onChange({ content: result.content })
-    closeSlashMenu()
 
     requestAnimationFrame(() => {
       textarea.focus()
       textarea.setSelectionRange(result.cursor, result.cursor)
+      setCursor(result.cursor)
     })
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     const textarea = event.currentTarget
+    const state = getSlashMenuState(textarea.value, textarea.selectionStart)
+    if (!state) return
 
-    if (
-      !menuOpenRef.current &&
-      event.key === '/' &&
-      !event.ctrlKey &&
-      !event.metaKey &&
-      !event.altKey
-    ) {
-      const { selectionStart, selectionEnd, value } = textarea
-      const nextValue =
-        value.slice(0, selectionStart) + '/' + value.slice(selectionEnd)
-      requestAnimationFrame(() => {
-        openSlashMenu(nextValue, selectionStart + 1)
-      })
-    }
-
-    if (!menuOpenRef.current) return
-
-    if (menuCommands.length === 0) {
+    const commands = filterSlashCommands(state.query)
+    if (commands.length === 0) {
       if (event.key === 'Escape') {
         event.preventDefault()
-        closeSlashMenu()
+        setCursor(state.slashStart)
       }
       return
     }
 
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      setSelectedIndex(current => (current + 1) % menuCommands.length)
+      setSelectedIndex(current => (current + 1) % commands.length)
       return
     }
 
     if (event.key === 'ArrowUp') {
       event.preventDefault()
-      setSelectedIndex(current => (current - 1 + menuCommands.length) % menuCommands.length)
+      setSelectedIndex(current => (current - 1 + commands.length) % commands.length)
       return
     }
 
     if (event.key === 'Enter' || event.key === 'Tab') {
       event.preventDefault()
-      const command = menuCommands[selectedIndex]
+      const command = commands[selectedIndex]
       if (command) selectSlashCommand(command)
       return
     }
 
     if (event.key === 'Escape') {
       event.preventDefault()
-      closeSlashMenu()
+      setCursor(state.slashStart)
     }
   }
 
@@ -133,7 +103,8 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
     <section className="editor">
       <div className="editor-toolbar">
         <span className="editor-meta">
-          Last edited {new Date(note.updatedAt).toLocaleString()}
+          Last edited {new Date(note.updatedAt).toLocaleString()} · build{' '}
+          {__APP_VERSION__.slice(0, 7)}
         </span>
         <button type="button" className="btn-danger" onClick={onDelete}>
           Delete
@@ -154,28 +125,45 @@ export function NoteEditor({ note, onChange, onDelete }: NoteEditorProps) {
           onChange={event => {
             const { value, selectionStart } = event.target
             onChange({ content: value })
-            syncSlashMenu(value, selectionStart)
+            setCursor(selectionStart)
           }}
           onKeyDown={handleKeyDown}
-          onKeyUp={syncSlashMenuFromTextarea}
-          onClick={syncSlashMenuFromTextarea}
-          onSelect={syncSlashMenuFromTextarea}
+          onKeyUp={event => updateCursor(event.currentTarget)}
+          onClick={event => updateCursor(event.currentTarget)}
+          onSelect={event => updateCursor(event.currentTarget)}
+          onScroll={() => {
+            const textarea = bodyRef.current
+            if (textarea && slashState) {
+              setMenuPosition(getTextareaAnchorRect(textarea))
+            }
+          }}
           placeholder="Start writing... Type / for headings, lists, and more."
           aria-label="Note content"
         />
-        {slashMenuOpen && (
-          <SlashMenu
-            commands={menuCommands}
-            selectedIndex={selectedIndex}
-            query={menuQuery}
-            onSelect={selectSlashCommand}
-            onHover={setSelectedIndex}
-          />
-        )}
       </div>
       <p className="editor-storage-hint">
         Notes are saved in this browser only (not on the server yet).
       </p>
+      {slashState &&
+        createPortal(
+          <div
+            className="slash-menu-portal"
+            style={{
+              top: menuPosition.top,
+              left: menuPosition.left,
+              width: menuPosition.width,
+            }}
+          >
+            <SlashMenu
+              commands={menuCommands}
+              selectedIndex={selectedIndex}
+              query={slashState.query}
+              onSelect={selectSlashCommand}
+              onHover={setSelectedIndex}
+            />
+          </div>,
+          document.body,
+        )}
     </section>
   )
 }
