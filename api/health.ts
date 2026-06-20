@@ -1,18 +1,11 @@
-import { hasRedisEnv } from '../lib/workspace-api/types'
-
 export default async function handler() {
-  try {
-    return Response.json({
-      ok: true,
-      storage: hasRedisEnv() ? 'redis' : 'memory',
-    })
-  } catch (error) {
-    return Response.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : 'Health check failed.',
-      },
-      { status: 500 },
-    )
-  }
+  const hasRedis = Boolean(
+    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
+      (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN),
+  )
+
+  return Response.json({
+    ok: true,
+    storage: hasRedis ? 'redis' : 'memory',
+  })
 }
