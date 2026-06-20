@@ -1,30 +1,19 @@
-import { Redis } from '@upstash/redis'
-import { emptyWorkspace, hasRedisEnv, normalizeWorkspace, type WorkspaceRecord } from './types'
+import {
+  emptyWorkspace,
+  getRedisRestConfig,
+  normalizeWorkspace,
+  redisGetJson,
+  redisSetJson,
+  type WorkspaceRecord,
+} from './types'
 
 const WORKSPACE_KEY = 'notes_hub:workspace'
 
 let memoryFallback: WorkspaceRecord | null = null
 
-function createRedisClient(): Redis | null {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    return Redis.fromEnv()
-  }
-
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    return new Redis({
-      url: process.env.KV_REST_API_URL,
-      token: process.env.KV_REST_API_TOKEN,
-    })
-  }
-
-  return null
-}
-
 export async function loadWorkspace(): Promise<WorkspaceRecord> {
-  const redis = createRedisClient()
-
-  if (redis) {
-    const stored = await redis.get<WorkspaceRecord>(WORKSPACE_KEY)
+  if (getRedisRestConfig()) {
+    const stored = await redisGetJson<WorkspaceRecord>(WORKSPACE_KEY)
     return stored ? normalizeWorkspace(stored) : emptyWorkspace()
   }
 
@@ -33,10 +22,9 @@ export async function loadWorkspace(): Promise<WorkspaceRecord> {
 
 export async function saveWorkspace(record: WorkspaceRecord): Promise<void> {
   const normalized = normalizeWorkspace(record)
-  const redis = createRedisClient()
 
-  if (redis) {
-    await redis.set(WORKSPACE_KEY, normalized)
+  if (getRedisRestConfig()) {
+    await redisSetJson(WORKSPACE_KEY, normalized)
     return
   }
 
@@ -61,8 +49,4 @@ export async function updateWorkspace(
 
   await saveWorkspace(next)
   return { ok: true, record: next }
-}
-
-export function storageBackendLabel(): 'redis' | 'memory' {
-  return hasRedisEnv() ? 'redis' : 'memory'
 }

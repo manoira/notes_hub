@@ -1,16 +1,15 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node'
+export function getBearerToken(request: Request): string {
+  const header = request.headers.get('authorization') ?? ''
+  return header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : ''
+}
 
-export function requireWorkspaceAuth(req: VercelRequest, res: VercelResponse): boolean {
+export function requireWorkspaceAuth(request: Request): Response | null {
   const workspaceToken = process.env.WORKSPACE_TOKEN ?? ''
-  if (!workspaceToken) return true
+  if (!workspaceToken) return null
 
-  const header = req.headers.authorization ?? ''
-  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : ''
-
-  if (token !== workspaceToken) {
-    res.status(401).json({ error: 'Unauthorized' })
-    return false
+  if (getBearerToken(request) !== workspaceToken) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  return true
+  return null
 }
