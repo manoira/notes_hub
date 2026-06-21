@@ -1,26 +1,29 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { requireWorkspaceAuth } from '../_lib/auth.js'
 import type { WorkspaceRecord } from '../_lib/types.js'
 import { loadWorkspace, updateWorkspace } from '../_lib/workspaceStore.js'
 
-export default async function handler(request: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const authError = requireWorkspaceAuth(request)
-    if (authError) return authError
+    if (!requireWorkspaceAuth(req, res)) return
 
-    if (request.method === 'GET') {
+    if (req.method === 'GET') {
       const record = await loadWorkspace()
-      return Response.json(record)
+      res.status(200).json(record)
+      return
     }
 
-    if (request.method === 'PUT') {
-      const body = (await request.json()) as WorkspaceRecord
+    if (req.method === 'PUT') {
+      const body = req.body as WorkspaceRecord
 
       if (!body || typeof body !== 'object' || !Array.isArray(body.items)) {
-        return Response.json({ error: 'Invalid workspace payload.' }, { status: 400 })
+        res.status(400).json({ error: 'Invalid workspace payload.' })
+        return
       }
 
       if (typeof body.revision !== 'number') {
-        return Response.json({ error: 'Missing workspace revision.' }, { status: 400 })
+        res.status(400).json({ error: 'Missing workspace revision.' })
+        return
       }
 
       const result = await updateWorkspace({
@@ -32,33 +35,27 @@ export default async function handler(request: Request) {
 
       if (!result.ok) {
         const current = await loadWorkspace()
-        return Response.json(
-          {
-            error: 'Workspace conflict.',
-            conflict: true,
-            serverRevision: result.serverRevision,
-            revision: current.revision,
-            items: current.items,
-            activeId: current.activeId,
-            updatedAt: current.updatedAt,
-          },
-          { status: 409 },
-        )
+        res.status(409).json({
+          error: 'Workspace conflict.',
+          conflict: true,
+          serverRevision: result.serverRevision,
+          revision: current.revision,
+          items: current.items,
+          activeId: current.activeId,
+          updatedAt: current.updatedAt,
+        })
+        return
       }
 
-      return Response.json(result.record)
+      res.status(200).json(result.record)
+      return
     }
 
-    return Response.json({ error: 'Method not allowed.' }, {
-      status: 405,
-      headers: { Allow: 'GET, PUT' },
-    })
+    res.setHeader('Allow', 'GET, PUT')
+    res.status(405).json({ error: 'Method not allowed.' })
   } catch (error) {
-    return Response.json(
-      {
-        error: error instanceof Error ? error.message : 'Workspace request failed.',
-      },
-      { status: 500 },
-    )
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Workspace request failed.',
+    })
   }
 }

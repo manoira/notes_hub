@@ -51,25 +51,30 @@ async function parseResponse(response: Response): Promise<RemoteWorkspaceRespons
   return body
 }
 
+function fetchOptions(method: string, body?: string): RequestInit {
+  return {
+    method,
+    headers: authHeaders(),
+    body,
+    signal: AbortSignal.timeout(10_000),
+  }
+}
+
 export function createRemoteWorkspaceStorage(): WorkspaceStorage {
   return {
     mode: 'remote',
 
     async load() {
-      const response = await fetch(workspaceUrl(), {
-        method: 'GET',
-        headers: authHeaders(),
-      })
+      const response = await fetch(workspaceUrl(), fetchOptions('GET'))
 
       return parseResponse(response)
     },
 
     async save(snapshot) {
-      const response = await fetch(workspaceUrl(), {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify(snapshot),
-      })
+      const response = await fetch(
+        workspaceUrl(),
+        fetchOptions('PUT', JSON.stringify(snapshot)),
+      )
 
       await parseResponse(response)
     },
