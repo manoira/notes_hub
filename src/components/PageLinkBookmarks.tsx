@@ -1,5 +1,5 @@
 import type { SmartLink } from '../types/note'
-import { hostnameFromUrl, normalizeUrl } from '../utils/url'
+import { embedUrl, hostnameFromUrl, normalizeUrl } from '../utils/url'
 
 type PageLinkBookmarksProps = {
   links: SmartLink[]
@@ -21,7 +21,7 @@ function LinkBookmarkCard({ link, onSelect }: LinkBookmarkCardProps) {
         {urlIsValid ? (
           <iframe
             className="link-bookmark-iframe"
-            src={link.url}
+            src={embedUrl(link.url)}
             title=""
             tabIndex={-1}
           />

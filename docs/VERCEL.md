@@ -43,6 +43,10 @@ Leave **`VITE_API_BASE_URL` empty** so the app calls `/api/...` on the same doma
 
 Redeploy after adding variables.
 
+**Important:** `VITE_*` variables are baked into the frontend at **build time**. Changing them in Vercel does nothing until you **Redeploy** (Deployments → … → Redeploy).
+
+`VITE_WORKSPACE_TOKEN` must be the **same secret** as `WORKSPACE_TOKEN` — not the word `remote`. If they differ, the app falls back to each browser’s local copy and notes will not sync across devices.
+
 ## 4. Custom domain (emmyzettergren.se)
 
 1. Vercel project → **Settings → Domains**
@@ -105,3 +109,14 @@ The Express server in `server/` remains for local dev without the Vercel CLI; pr
 ## Cost
 
 Vercel **Hobby** (free) is sufficient for personal Notes Hub usage: static hosting, serverless API, and Redis within free limits.
+
+## Troubleshooting sync
+
+| Symptom | Likely cause | Fix |
+| ------- | ------------ | --- |
+| Sidebar says **This browser only** | `VITE_STORAGE_MODE` not `remote` at build time | Set env var, redeploy |
+| Sidebar shows **token missing** or **sync rejected** | `VITE_WORKSPACE_TOKEN` empty, wrong, or ≠ `WORKSPACE_TOKEN` | Match both to the same secret, redeploy |
+| `/api/health` OK but notes differ per device | App using local fallback after auth error | Fix token, redeploy, reload all devices |
+| One device has old notes after fix | `localStorage` cache from failed sync | After token fix, reload — cloud copy loads from Redis |
+
+Check sync status in the sidebar footer: **Cloud sync** / **Synced** = working; red error text = still local-only.

@@ -28,3 +28,24 @@ export function hostnameFromUrl(url: string): string {
     return url
   }
 }
+
+/** URL safe for iframe src when Notes Hub is served over HTTPS. */
+export function embedUrl(url: string): string {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol === 'http:') {
+      parsed.protocol = 'https:'
+    }
+    return parsed.href
+  } catch {
+    return url
+  }
+}
+
+export function usesInsecureHttp(url: string): boolean {
+  try {
+    return new URL(url).protocol === 'http:'
+  } catch {
+    return false
+  }
+}

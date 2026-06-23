@@ -17,3 +17,12 @@ export const appConfig = {
 export function isRemoteStorageConfigured(): boolean {
   return appConfig.storageMode === 'remote'
 }
+
+/** False when remote sync is enabled but the build has no usable API token. */
+export function isWorkspaceTokenConfigured(): boolean {
+  const token = appConfig.workspaceToken.trim()
+  if (!token) return false
+  // Common misconfiguration: copying VITE_STORAGE_MODE value into VITE_WORKSPACE_TOKEN.
+  if (token === 'remote' || token === 'local') return false
+  return true
+}

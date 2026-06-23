@@ -7,6 +7,16 @@ export default defineConfig(({ mode }) => {
   const appVersion =
     process.env.VITE_APP_VERSION || process.env.VERCEL_GIT_COMMIT_SHA || 'dev'
 
+  if (env.VITE_STORAGE_MODE === 'remote') {
+    const token = (env.VITE_WORKSPACE_TOKEN ?? '').trim()
+    if (!token || token === 'remote' || token === 'local') {
+      console.warn(
+        '[notes_hub] VITE_STORAGE_MODE=remote but VITE_WORKSPACE_TOKEN is missing or invalid. ' +
+          'Set it to the same secret as WORKSPACE_TOKEN, then redeploy.',
+      )
+    }
+  }
+
   return {
     base: env.BASE_PATH || '/',
     plugins: [

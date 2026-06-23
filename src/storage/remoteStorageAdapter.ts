@@ -1,4 +1,4 @@
-import { appConfig } from '../config/appConfig'
+import { appConfig, isWorkspaceTokenConfigured } from '../config/appConfig'
 import type { WorkspaceSnapshot } from '../types/workspace'
 import {
   WorkspaceAuthError,
@@ -31,7 +31,7 @@ function workspaceUrl(): string {
 
 async function parseResponse(response: Response): Promise<RemoteWorkspaceResponse> {
   if (response.status === 401 || response.status === 403) {
-    throw new WorkspaceAuthError()
+    throw new WorkspaceAuthError('rejected')
   }
 
   const body = (await response.json().catch(() => null)) as RemoteWorkspaceResponse | null
@@ -60,17 +60,25 @@ function fetchOptions(method: string, body?: string): RequestInit {
   }
 }
 
+function assertWorkspaceTokenConfigured(): void {
+  if (!isWorkspaceTokenConfigured()) {
+    throw new WorkspaceAuthError('missing')
+  }
+}
+
 export function createRemoteWorkspaceStorage(): WorkspaceStorage {
   return {
     mode: 'remote',
 
     async load() {
+      assertWorkspaceTokenConfigured()
       const response = await fetch(workspaceUrl(), fetchOptions('GET'))
 
       return parseResponse(response)
     },
 
     async save(snapshot) {
+      assertWorkspaceTokenConfigured()
       const response = await fetch(
         workspaceUrl(),
         fetchOptions('PUT', JSON.stringify(snapshot)),

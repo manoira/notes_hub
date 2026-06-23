@@ -21,7 +21,9 @@ function statusMessage(persistence: PersistenceState): string {
 }
 
 function statusClass(persistence: PersistenceState): string {
-  if (persistence.status === 'error') return 'sync-status sync-status-error'
+  if (persistence.status === 'error') {
+    return 'sync-status sync-status-error'
+  }
   if (persistence.status === 'loading') return 'sync-status sync-status-local'
   if (persistence.status === 'saved' && persistence.mode === 'remote') {
     return 'sync-status sync-status-synced'

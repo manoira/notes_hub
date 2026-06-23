@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { SmartLink } from '../types/note'
-import { hostnameFromUrl, normalizeUrl } from '../utils/url'
+import { embedUrl, hostnameFromUrl, normalizeUrl, usesInsecureHttp } from '../utils/url'
 
 type LinkPreviewProps = {
   link: SmartLink
@@ -12,6 +12,8 @@ export function LinkPreview({ link, onChange, onDelete }: LinkPreviewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const hostname = hostnameFromUrl(link.url)
   const urlIsValid = normalizeUrl(link.url) !== null
+  const iframeSrc = urlIsValid ? embedUrl(link.url) : ''
+  const savedAsHttp = usesInsecureHttp(link.url)
 
   useEffect(() => {
     setIsFullscreen(false)
@@ -94,9 +96,9 @@ export function LinkPreview({ link, onChange, onDelete }: LinkPreviewProps) {
         ) : (
           <div className="link-embed-wrap">
             <iframe
-              key={link.url}
+              key={iframeSrc}
               className="link-embed"
-              src={link.url}
+              src={iframeSrc}
               title={link.title}
             />
             <button
@@ -107,7 +109,9 @@ export function LinkPreview({ link, onChange, onDelete }: LinkPreviewProps) {
               Fullscreen
             </button>
             <p className="link-embed-hint">
-              If the preview is blank, the site blocks embedding — use Open in new tab.
+              {savedAsHttp
+                ? 'Preview uses HTTPS automatically — browsers block HTTP pages inside HTTPS apps. Update the URL to https:// if needed.'
+                : 'If the preview is blank, the site blocks embedding — use Open in new tab.'}
             </p>
           </div>
         )}
@@ -144,9 +148,9 @@ export function LinkPreview({ link, onChange, onDelete }: LinkPreviewProps) {
             </div>
           </header>
           <iframe
-            key={`fullscreen-${link.url}`}
+            key={`fullscreen-${iframeSrc}`}
             className="link-fullscreen-embed"
-            src={link.url}
+            src={iframeSrc}
             title={`${link.title} fullscreen`}
           />
         </div>

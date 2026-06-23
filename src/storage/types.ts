@@ -17,8 +17,12 @@ export class WorkspaceConflictError extends Error {
 }
 
 export class WorkspaceAuthError extends Error {
-  constructor() {
-    super('Could not access remote workspace. Check your sync token.')
+  constructor(reason: 'missing' | 'rejected' = 'rejected') {
+    super(
+      reason === 'missing'
+        ? 'Cloud sync token missing in this build. Set VITE_WORKSPACE_TOKEN on Vercel and redeploy.'
+        : 'Cloud sync rejected — VITE_WORKSPACE_TOKEN must match WORKSPACE_TOKEN on the server. Redeploy after fixing.',
+    )
     this.name = 'WorkspaceAuthError'
   }
 }
