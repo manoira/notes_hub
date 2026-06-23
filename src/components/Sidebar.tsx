@@ -1,38 +1,56 @@
 import { useState } from 'react'
 import { APP_VERSION } from '../buildInfo'
 import type { SidebarItem } from '../types/note'
-import type { PersistenceState } from '../types/workspace'
+import type { PersistenceState, SidebarSection } from '../types/workspace'
 import { AddLinkDialog } from './AddLinkDialog'
 import { SidebarTree } from './SidebarTree'
 import { SyncStatus } from './SyncStatus'
 
+type LinkContext = {
+  parentId: string | null
+  sectionId: string | null
+}
+
 type SidebarProps = {
   items: SidebarItem[]
+  sections: SidebarSection[]
   activeId: string | null
   persistence: PersistenceState
   onSelect: (id: string) => void
-  onAddPage: (parentId?: string | null) => void
-  onAddLink: (url: string, title?: string, parentId?: string | null) => boolean
+  onAddPage: (context?: { parentId?: string | null; sectionId?: string | null }) => void
+  onAddLink: (
+    url: string,
+    title?: string,
+    context?: { parentId?: string | null; sectionId?: string | null },
+  ) => boolean
+  onAddSection: () => void
+  onUpdateSection: (id: string, patch: Partial<Pick<SidebarSection, 'title' | 'collapsed'>>) => void
+  onDeleteSection: (id: string) => void
+  onMoveItemToSection: (itemId: string, sectionId: string | null) => void
 }
 
 export function Sidebar({
   items,
+  sections,
   activeId,
   persistence,
   onSelect,
   onAddPage,
   onAddLink,
+  onAddSection,
+  onUpdateSection,
+  onDeleteSection,
+  onMoveItemToSection,
 }: SidebarProps) {
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
-  const [linkParentId, setLinkParentId] = useState<string | null>(null)
+  const [linkContext, setLinkContext] = useState<LinkContext>({
+    parentId: null,
+    sectionId: null,
+  })
 
-  function openLinkDialog(parentId: string | null) {
-    setLinkParentId(parentId)
+  function openLinkDialog(context: LinkContext = { parentId: null, sectionId: null }) {
+    setLinkContext(context)
     setLinkDialogOpen(true)
-  }
-
-  function handleAddLink(parentId: string | null) {
-    openLinkDialog(parentId)
   }
 
   return (
@@ -41,25 +59,35 @@ export function Sidebar({
         <div className="sidebar-header">
           <h1>Notes Hub</h1>
           <div className="sidebar-actions">
-            <button type="button" className="btn-primary" onClick={() => onAddPage(null)}>
+            <button type="button" className="btn-primary" onClick={() => onAddPage()}>
               + New page
             </button>
             <button
               type="button"
               className="btn-secondary btn-inline"
-              onClick={() => openLinkDialog(null)}
+              onClick={() => openLinkDialog()}
             >
               + Smart link
+            </button>
+            <button type="button" className="btn-secondary btn-inline" onClick={onAddSection}>
+              + New section
             </button>
           </div>
         </div>
         <nav className="note-list" aria-label="Pages and links">
           <SidebarTree
             items={items}
+            sections={sections}
             activeId={activeId}
             onSelect={onSelect}
             onAddPage={onAddPage}
-            onAddLink={handleAddLink}
+            onAddLink={context => openLinkDialog({
+              parentId: context?.parentId ?? null,
+              sectionId: context?.sectionId ?? null,
+            })}
+            onUpdateSection={onUpdateSection}
+            onDeleteSection={onDeleteSection}
+            onMoveItemToSection={onMoveItemToSection}
           />
         </nav>
         <SyncStatus persistence={persistence} />
@@ -70,13 +98,13 @@ export function Sidebar({
         open={linkDialogOpen}
         onClose={() => {
           setLinkDialogOpen(false)
-          setLinkParentId(null)
+          setLinkContext({ parentId: null, sectionId: null })
         }}
         onAdd={(url, title) => {
-          const ok = onAddLink(url, title, linkParentId)
+          const ok = onAddLink(url, title, linkContext)
           if (ok) {
             setLinkDialogOpen(false)
-            setLinkParentId(null)
+            setLinkContext({ parentId: null, sectionId: null })
           }
           return ok
         }}

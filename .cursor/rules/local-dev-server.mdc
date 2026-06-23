@@ -1,0 +1,42 @@
+---
+description: Start and verify the local Vite dev server after UI changes so localhost always works.
+alwaysApply: true
+---
+
+# Local dev server (Notes Hub)
+
+This project does **not** auto-start a dev server. If the user opens localhost and sees "can't be reached", the server is not running.
+
+## Default URL
+
+- **http://localhost:5175/** (port **5175** — not Vite's default 5173)
+- Configured in `vite.config.ts` (`server.port: 5175`, `strictPort: false`)
+
+## When to start the server
+
+After implementing or changing anything the user may preview locally (`src/**`, `App.css`, components, hooks, etc.):
+
+1. **Check** the terminals folder — is `npm run dev` already running for this repo?
+2. If **not running**, start it in the background from the project root:
+   ```powershell
+   npm run dev
+   ```
+3. **Wait** for `VITE … ready` and note the printed `Local:` URL (usually 5175).
+4. **Verify** with a quick request (e.g. `curl.exe -sI http://localhost:5175/`) before telling the user to open the site.
+5. Tell the user the exact URL to open. Remind them to keep the terminal open.
+
+## If port 5175 is busy
+
+Vite may pick another port because `strictPort: false`. Always use the URL printed in the terminal output, not a guessed port.
+
+## Remote sync locally (optional)
+
+- `npm run dev` alone → browser-only mode (`localStorage`), no `/api` unless the Express proxy target runs on `:3001`.
+- Full cloud sync locally → `npm run dev:vercel` or run `server` + `.env.local` with `VITE_STORAGE_MODE=remote` (see `docs/VERCEL.md`).
+
+For normal UI preview after edits, **`npm run dev` on 5175 is enough**.
+
+## Do not
+
+- Assume localhost works without starting the server.
+- Point the user to `localhost:5173` or a bare `localhost` without a port.

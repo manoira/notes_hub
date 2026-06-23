@@ -42,6 +42,7 @@ export async function updateWorkspace(
 
   const next: WorkspaceRecord = {
     items: incoming.items,
+    sections: incoming.sections ?? [],
     activeId: incoming.activeId,
     revision: current.revision + 1,
     updatedAt: new Date().toISOString(),

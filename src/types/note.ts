@@ -2,7 +2,10 @@ export type SidebarItemBase = {
   id: string
   title: string
   updatedAt: string
+  /** Parent page in the tree (nested pages / links). */
   parentId: string | null
+  /** Top-level grouping in the sidebar (Notion-style section). Ignored when parentId is set. */
+  sectionId: string | null
 }
 
 export type Page = SidebarItemBase & {

@@ -15,12 +15,17 @@ function App() {
   const {
     loaded,
     items,
+    sections,
     activeItem,
     activeId,
     persistence,
     selectItem,
     addPage,
     addLink,
+    addSection,
+    updateSection,
+    deleteSection,
+    moveItemToSection,
     updatePage,
     updateLink,
     deleteItem,
@@ -38,11 +43,16 @@ function App() {
     <div className="app-shell">
       <Sidebar
         items={items}
+        sections={sections}
         activeId={activeId}
         persistence={persistence}
         onSelect={selectItem}
         onAddPage={addPage}
         onAddLink={addLink}
+        onAddSection={() => addSection()}
+        onUpdateSection={updateSection}
+        onDeleteSection={deleteSection}
+        onMoveItemToSection={moveItemToSection}
       />
       {activeItem?.kind === 'page' ? (
         <NoteEditor

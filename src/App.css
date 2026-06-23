@@ -64,6 +64,122 @@
   padding: 0.5rem 0.35rem;
 }
 
+.sidebar-empty,
+.sidebar-section-empty {
+  margin: 0.35rem 0.75rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.sidebar-section-group {
+  margin-bottom: 0.35rem;
+}
+
+.sidebar-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.15rem 0.35rem 0.15rem 0.2rem;
+  border-radius: 6px;
+}
+
+.sidebar-section-header:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+@media (prefers-color-scheme: dark) {
+  .sidebar-section-header:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.sidebar-section-header:hover .sidebar-section-actions {
+  opacity: 1;
+}
+
+.sidebar-section-toggle {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  padding: 0;
+}
+
+.sidebar-section-toggle:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-section-title {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0.2rem 0.15rem;
+}
+
+.sidebar-section-title-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebar-section-actions {
+  display: flex;
+  gap: 0.15rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.sidebar-section-delete:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.sidebar-section-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.note-tree-section-select {
+  max-width: 5.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.65rem;
+  padding: 0 0.2rem;
+}
+
+.note-tree-section-select:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 .note-tree-branch {
   display: flex;
   flex-direction: column;

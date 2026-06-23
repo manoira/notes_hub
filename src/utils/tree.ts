@@ -1,8 +1,14 @@
 import type { SidebarItem, SmartLink } from '../types/note'
+import type { SidebarSection } from '../types/workspace'
 
 export type TreeNode = {
   item: SidebarItem
   children: TreeNode[]
+}
+
+export type SidebarGroup = {
+  section: SidebarSection | null
+  nodes: TreeNode[]
 }
 
 export function buildTree(
@@ -20,6 +26,32 @@ export function buildTree(
     }))
 }
 
+export function buildSidebarGroups(
+  items: SidebarItem[],
+  sections: SidebarSection[],
+): SidebarGroup[] {
+  const sortedSections = [...sections].sort((a, b) => a.order - b.order)
+  const groups: SidebarGroup[] = []
+
+  const unsectioned = buildTree(
+    items.filter(item => (item.parentId ?? null) === null && (item.sectionId ?? null) === null),
+  )
+  if (unsectioned.length > 0) {
+    groups.push({ section: null, nodes: unsectioned })
+  }
+
+  for (const section of sortedSections) {
+    const nodes = buildTree(
+      items.filter(
+        item => (item.parentId ?? null) === null && (item.sectionId ?? null) === section.id,
+      ),
+    )
+    groups.push({ section, nodes })
+  }
+
+  return groups
+}
+
 export function collectDescendantIds(items: SidebarItem[], rootId: string): Set<string> {
   const ids = new Set<string>([rootId])
 
@@ -29,7 +61,6 @@ export function collectDescendantIds(items: SidebarItem[], rootId: string): Set<
     }
   }
 
-  // Repeat until no new descendants (handles arbitrary depth)
   let previousSize = 0
   while (ids.size !== previousSize) {
     previousSize = ids.size
@@ -66,4 +97,9 @@ export function getChildLinks(items: SidebarItem[], parentId: string): SmartLink
     .sort(
       (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     )
+}
+
+export function nextSectionOrder(sections: SidebarSection[]): number {
+  if (sections.length === 0) return 0
+  return Math.max(...sections.map(section => section.order)) + 1
 }

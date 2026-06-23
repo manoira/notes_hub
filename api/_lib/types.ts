@@ -1,5 +1,6 @@
 export type WorkspaceRecord = {
   items: unknown[]
+  sections?: unknown[]
   activeId: string | null
   revision: number
   updatedAt: string
@@ -8,6 +9,7 @@ export type WorkspaceRecord = {
 export function emptyWorkspace(): WorkspaceRecord {
   return {
     items: [],
+    sections: [],
     activeId: null,
     revision: 0,
     updatedAt: new Date().toISOString(),
@@ -20,6 +22,7 @@ export function normalizeWorkspace(value: unknown): WorkspaceRecord {
   const record = value as WorkspaceRecord
   return {
     items: Array.isArray(record.items) ? record.items : [],
+    sections: Array.isArray(record.sections) ? record.sections : [],
     activeId: typeof record.activeId === 'string' ? record.activeId : null,
     revision: typeof record.revision === 'number' ? record.revision : 0,
     updatedAt:

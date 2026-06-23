@@ -1,14 +1,20 @@
 import { useState } from 'react'
 import type { SidebarItem } from '../types/note'
-import { buildTree, type TreeNode } from '../utils/tree'
+import type { SidebarSection } from '../types/workspace'
+import { buildSidebarGroups, type TreeNode } from '../utils/tree'
 import { hostnameFromUrl } from '../utils/url'
+import { SidebarSectionHeader } from './SidebarSectionHeader'
 
 type SidebarTreeProps = {
   items: SidebarItem[]
+  sections: SidebarSection[]
   activeId: string | null
   onSelect: (id: string) => void
-  onAddPage: (parentId: string | null) => void
-  onAddLink: (parentId: string | null) => void
+  onAddPage: (context?: { parentId?: string | null; sectionId?: string | null }) => void
+  onAddLink: (context?: { parentId?: string | null; sectionId?: string | null }) => void
+  onUpdateSection: (id: string, patch: Partial<Pick<SidebarSection, 'title' | 'collapsed'>>) => void
+  onDeleteSection: (id: string) => void
+  onMoveItemToSection: (itemId: string, sectionId: string | null) => void
 }
 
 function formatDate(iso: string) {
@@ -28,10 +34,13 @@ type TreeRowProps = {
   depth: number
   activeId: string | null
   collapsedIds: Set<string>
+  sections: SidebarSection[]
+  currentSectionId: string | null
   onToggle: (id: string) => void
   onSelect: (id: string) => void
-  onAddPage: (parentId: string | null) => void
-  onAddLink: (parentId: string | null) => void
+  onAddPage: (context?: { parentId?: string | null; sectionId?: string | null }) => void
+  onAddLink: (context?: { parentId?: string | null; sectionId?: string | null }) => void
+  onMoveItemToSection: (itemId: string, sectionId: string | null) => void
 }
 
 function TreeRow({
@@ -39,15 +48,19 @@ function TreeRow({
   depth,
   activeId,
   collapsedIds,
+  sections,
+  currentSectionId,
   onToggle,
   onSelect,
   onAddPage,
   onAddLink,
+  onMoveItemToSection,
 }: TreeRowProps) {
   const { item, children } = node
   const hasChildren = children.length > 0
   const isCollapsed = collapsedIds.has(item.id)
   const isActive = item.id === activeId
+  const isTopLevel = depth === 0
 
   return (
     <div className="note-tree-branch">
@@ -86,6 +99,26 @@ function TreeRow({
         </button>
 
         <div className="note-tree-actions">
+          {isTopLevel && sections.length > 0 ? (
+            <select
+              className="note-tree-section-select"
+              value={currentSectionId ?? ''}
+              title="Move to section"
+              aria-label={`Move ${item.title || 'item'} to section`}
+              onClick={event => event.stopPropagation()}
+              onChange={event => {
+                const value = event.target.value
+                onMoveItemToSection(item.id, value === '' ? null : value)
+              }}
+            >
+              <option value="">Ungrouped</option>
+              {sections.map(section => (
+                <option key={section.id} value={section.id}>
+                  {section.title}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <button
             type="button"
             className="note-tree-action"
@@ -93,7 +126,7 @@ function TreeRow({
             aria-label={`Add subpage under ${item.title || 'Untitled'}`}
             onClick={event => {
               event.stopPropagation()
-              onAddPage(item.id)
+              onAddPage({ parentId: item.id })
             }}
           >
             +
@@ -105,7 +138,7 @@ function TreeRow({
             aria-label={`Add smart link under ${item.title || 'Untitled'}`}
             onClick={event => {
               event.stopPropagation()
-              onAddLink(item.id)
+              onAddLink({ parentId: item.id })
             }}
           >
             ↗
@@ -121,10 +154,13 @@ function TreeRow({
               depth={depth + 1}
               activeId={activeId}
               collapsedIds={collapsedIds}
+              sections={sections}
+              currentSectionId={currentSectionId}
               onToggle={onToggle}
               onSelect={onSelect}
               onAddPage={onAddPage}
               onAddLink={onAddLink}
+              onMoveItemToSection={onMoveItemToSection}
             />
           ))
         : null}
@@ -134,13 +170,17 @@ function TreeRow({
 
 export function SidebarTree({
   items,
+  sections,
   activeId,
   onSelect,
   onAddPage,
   onAddLink,
+  onUpdateSection,
+  onDeleteSection,
+  onMoveItemToSection,
 }: SidebarTreeProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set())
-  const tree = buildTree(items)
+  const groups = buildSidebarGroups(items, sections)
 
   function toggleCollapsed(id: string) {
     setCollapsedIds(prev => {
@@ -154,43 +194,94 @@ export function SidebarTree({
     })
   }
 
-  function handleAddPage(parentId: string | null) {
-    onAddPage(parentId)
-    if (parentId) {
+  function handleAddPage(context?: { parentId?: string | null; sectionId?: string | null }) {
+    onAddPage(context)
+    if (context?.parentId) {
       setCollapsedIds(prev => {
         const next = new Set(prev)
-        next.delete(parentId)
+        next.delete(context.parentId!)
         return next
       })
+    }
+    if (context?.sectionId) {
+      onUpdateSection(context.sectionId, { collapsed: false })
     }
   }
 
-  function handleAddLink(parentId: string | null) {
-    onAddLink(parentId)
-    if (parentId) {
+  function handleAddLink(context?: { parentId?: string | null; sectionId?: string | null }) {
+    onAddLink(context)
+    if (context?.parentId) {
       setCollapsedIds(prev => {
         const next = new Set(prev)
-        next.delete(parentId)
+        next.delete(context.parentId!)
         return next
       })
     }
+    if (context?.sectionId) {
+      onUpdateSection(context.sectionId, { collapsed: false })
+    }
+  }
+
+  if (groups.length === 0 && sections.length === 0) {
+    return <p className="sidebar-empty">No pages yet — create one above.</p>
   }
 
   return (
     <>
-      {tree.map(node => (
-        <TreeRow
-          key={node.item.id}
-          node={node}
-          depth={0}
-          activeId={activeId}
-          collapsedIds={collapsedIds}
-          onToggle={toggleCollapsed}
-          onSelect={onSelect}
-          onAddPage={handleAddPage}
-          onAddLink={handleAddLink}
-        />
-      ))}
+      {groups.map(group => {
+        const groupKey = group.section?.id ?? 'ungrouped'
+
+        return (
+          <div key={groupKey} className="sidebar-section-group">
+            {group.section ? (
+              <SidebarSectionHeader
+                section={group.section}
+                onToggleCollapsed={() =>
+                  onUpdateSection(group.section!.id, {
+                    collapsed: !group.section!.collapsed,
+                  })
+                }
+                onRename={title => onUpdateSection(group.section!.id, { title })}
+                onDelete={() => {
+                  if (
+                    window.confirm(
+                      `Delete section "${group.section!.title}"? Pages and links will move to Ungrouped.`,
+                    )
+                  ) {
+                    onDeleteSection(group.section!.id)
+                  }
+                }}
+                onAddPage={() => handleAddPage({ sectionId: group.section!.id })}
+                onAddLink={() => handleAddLink({ sectionId: group.section!.id })}
+              />
+            ) : null}
+
+            {group.section?.collapsed ? null : (
+              <div className="sidebar-section-items">
+                {group.nodes.map(node => (
+                  <TreeRow
+                    key={node.item.id}
+                    node={node}
+                    depth={0}
+                    activeId={activeId}
+                    collapsedIds={collapsedIds}
+                    sections={sections}
+                    currentSectionId={group.section?.id ?? null}
+                    onToggle={toggleCollapsed}
+                    onSelect={onSelect}
+                    onAddPage={handleAddPage}
+                    onAddLink={handleAddLink}
+                    onMoveItemToSection={onMoveItemToSection}
+                  />
+                ))}
+                {group.section && group.nodes.length === 0 ? (
+                  <p className="sidebar-section-empty">No pages in this section</p>
+                ) : null}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </>
   )
 }

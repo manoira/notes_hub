@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Page, SidebarItem, SmartLink } from '../types/note'
-import type { PersistenceState } from '../types/workspace'
+import type { PersistenceState, SidebarSection } from '../types/workspace'
 import { appConfig } from '../config/appConfig'
 import {
   createWorkspaceStorage,
@@ -10,18 +10,25 @@ import { WorkspaceConflictError } from '../storage/types'
 import {
   createLink,
   createPage,
+  createSection,
   createSnapshot,
   loadLocalSnapshot,
   saveLocalSnapshot,
 } from '../storage/workspace'
-import { collectDescendantIds, isValidParentId } from '../utils/tree'
+import { collectDescendantIds, isValidParentId, nextSectionOrder } from '../utils/tree'
 import { normalizeUrl } from '../utils/url'
+
+type AddItemContext = {
+  parentId?: string | null
+  sectionId?: string | null
+}
 
 export function useNotes() {
   const storageRef = useRef(createWorkspaceStorage())
   const revisionRef = useRef(0)
   const [loaded, setLoaded] = useState(false)
   const [items, setItems] = useState<SidebarItem[]>([])
+  const [sections, setSections] = useState<SidebarSection[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [persistence, setPersistence] = useState<PersistenceState>({ status: 'loading' })
 
@@ -40,6 +47,7 @@ export function useNotes() {
 
         revisionRef.current = snapshot.revision
         setItems(snapshot.items)
+        setSections(snapshot.sections ?? [])
         setActiveId(snapshot.activeId)
         setPersistence({ status: 'ready', mode: storage.mode })
         setLoaded(true)
@@ -49,6 +57,7 @@ export function useNotes() {
         const fallback = loadLocalSnapshot()
         revisionRef.current = fallback.revision
         setItems(fallback.items)
+        setSections(fallback.sections ?? [])
         setActiveId(fallback.activeId)
         setPersistence({
           status: 'error',
@@ -79,7 +88,7 @@ export function useNotes() {
 
     const timeout = window.setTimeout(() => {
       void (async () => {
-        const snapshot = createSnapshot(items, activeId, revisionRef.current)
+        const snapshot = createSnapshot(items, sections, activeId, revisionRef.current)
 
         try {
           await storage.save(snapshot)
@@ -100,6 +109,7 @@ export function useNotes() {
               const remote = await storage.load()
               revisionRef.current = remote.revision
               setItems(remote.items)
+              setSections(remote.sections ?? [])
               setActiveId(remote.activeId)
               saveLocalSnapshot(remote)
               setPersistence({ status: 'ready', mode: storage.mode })
@@ -127,7 +137,7 @@ export function useNotes() {
     }, appConfig.saveDebounceMs)
 
     return () => window.clearTimeout(timeout)
-  }, [items, activeId, loaded])
+  }, [items, sections, activeId, loaded])
 
   const activeItem = items.find(item => item.id === activeId) ?? null
 
@@ -136,10 +146,10 @@ export function useNotes() {
   }, [])
 
   const addPage = useCallback(
-    (parentId: string | null = null) => {
+    ({ parentId = null, sectionId = null }: AddItemContext = {}) => {
       if (!isValidParentId(items, parentId)) return null
 
-      const page = createPage('Untitled', parentId)
+      const page = createPage('Untitled', parentId, sectionId)
       setItems(prev => [page, ...prev])
       setActiveId(page.id)
       return page.id
@@ -148,17 +158,58 @@ export function useNotes() {
   )
 
   const addLink = useCallback(
-    (rawUrl: string, title?: string, parentId: string | null = null) => {
+    (
+      rawUrl: string,
+      title?: string,
+      { parentId = null, sectionId = null }: AddItemContext = {},
+    ) => {
       const url = normalizeUrl(rawUrl)
       if (!url || !isValidParentId(items, parentId)) return false
 
-      const link = createLink(url, title, parentId)
+      const link = createLink(url, title, parentId, sectionId)
       setItems(prev => [link, ...prev])
       setActiveId(link.id)
       return true
     },
     [items],
   )
+
+  const addSection = useCallback((title = 'New section') => {
+    const section = createSection(title, nextSectionOrder(sections))
+    setSections(prev => [...prev, section])
+    return section.id
+  }, [sections])
+
+  const updateSection = useCallback(
+    (id: string, patch: Partial<Pick<SidebarSection, 'title' | 'collapsed'>>) => {
+      setSections(prev =>
+        prev.map(section => (section.id === id ? { ...section, ...patch } : section)),
+      )
+    },
+    [],
+  )
+
+  const deleteSection = useCallback((id: string) => {
+    setSections(prev => prev.filter(section => section.id !== id))
+    setItems(prev =>
+      prev.map(item =>
+        item.sectionId === id ? { ...item, sectionId: null, updatedAt: new Date().toISOString() } : item,
+      ),
+    )
+  }, [])
+
+  const moveItemToSection = useCallback((itemId: string, sectionId: string | null) => {
+    setItems(prev =>
+      prev.map(item => {
+        if (item.id !== itemId || (item.parentId ?? null) !== null) return item
+        return {
+          ...item,
+          sectionId,
+          updatedAt: new Date().toISOString(),
+        }
+      }),
+    )
+  }, [])
 
   const updatePage = useCallback((id: string, patch: Partial<Pick<Page, 'title' | 'content'>>) => {
     setItems(prev =>
@@ -211,12 +262,17 @@ export function useNotes() {
   return {
     loaded,
     items,
+    sections,
     activeItem,
     activeId,
     persistence,
     selectItem,
     addPage,
     addLink,
+    addSection,
+    updateSection,
+    deleteSection,
+    moveItemToSection,
     updatePage,
     updateLink,
     deleteItem,
