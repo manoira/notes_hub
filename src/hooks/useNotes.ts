@@ -16,6 +16,8 @@ import {
   saveLocalSnapshot,
 } from '../storage/workspace'
 import { collectDescendantIds, isValidParentId, nextSectionOrder } from '../utils/tree'
+import { applyItemDrop, applyItemDropToSection, orderForNewSibling } from '../utils/itemOrder'
+import type { DropPosition } from '../utils/itemOrder'
 import { normalizeUrl } from '../utils/url'
 
 type AddItemContext = {
@@ -150,6 +152,7 @@ export function useNotes() {
       if (!isValidParentId(items, parentId)) return null
 
       const page = createPage('Untitled', parentId, sectionId)
+      page.order = orderForNewSibling(items, parentId, parentId ? null : sectionId)
       setItems(prev => [page, ...prev])
       setActiveId(page.id)
       return page.id
@@ -167,6 +170,7 @@ export function useNotes() {
       if (!url || !isValidParentId(items, parentId)) return false
 
       const link = createLink(url, title, parentId, sectionId)
+      link.order = orderForNewSibling(items, parentId, parentId ? null : sectionId)
       setItems(prev => [link, ...prev])
       setActiveId(link.id)
       return true
@@ -180,14 +184,11 @@ export function useNotes() {
     return section.id
   }, [sections])
 
-  const updateSection = useCallback(
-    (id: string, patch: Partial<Pick<SidebarSection, 'title' | 'collapsed'>>) => {
-      setSections(prev =>
-        prev.map(section => (section.id === id ? { ...section, ...patch } : section)),
-      )
-    },
-    [],
-  )
+  const updateSection = useCallback((id: string, patch: Partial<Pick<SidebarSection, 'title'>>) => {
+    setSections(prev =>
+      prev.map(section => (section.id === id ? { ...section, ...patch } : section)),
+    )
+  }, [])
 
   const deleteSection = useCallback((id: string) => {
     setSections(prev => prev.filter(section => section.id !== id))
@@ -199,16 +200,26 @@ export function useNotes() {
   }, [])
 
   const moveItemToSection = useCallback((itemId: string, sectionId: string | null) => {
+    setItems(prev => applyItemDropToSection(prev, itemId, sectionId) ?? prev)
+  }, [])
+
+  const renameItem = useCallback((id: string, title: string) => {
     setItems(prev =>
-      prev.map(item => {
-        if (item.id !== itemId || (item.parentId ?? null) !== null) return item
-        return {
-          ...item,
-          sectionId,
-          updatedAt: new Date().toISOString(),
-        }
-      }),
+      prev.map(item =>
+        item.id === id ? { ...item, title, updatedAt: new Date().toISOString() } : item,
+      ),
     )
+  }, [])
+
+  const moveItem = useCallback(
+    (draggedId: string, targetId: string, position: DropPosition) => {
+      setItems(prev => applyItemDrop(prev, draggedId, targetId, position) ?? prev)
+    },
+    [],
+  )
+
+  const moveItemToSectionEnd = useCallback((draggedId: string, sectionId: string | null) => {
+    setItems(prev => applyItemDropToSection(prev, draggedId, sectionId) ?? prev)
   }, [])
 
   const updatePage = useCallback((id: string, patch: Partial<Pick<Page, 'title' | 'content'>>) => {
@@ -273,6 +284,9 @@ export function useNotes() {
     updateSection,
     deleteSection,
     moveItemToSection,
+    moveItem,
+    moveItemToSectionEnd,
+    renameItem,
     updatePage,
     updateLink,
     deleteItem,

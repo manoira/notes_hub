@@ -1,5 +1,6 @@
 import type { SidebarItem, SmartLink } from '../types/note'
 import type { SidebarSection } from '../types/workspace'
+import { compareItemOrder } from './itemOrder'
 
 export type TreeNode = {
   item: SidebarItem
@@ -17,9 +18,7 @@ export function buildTree(
 ): TreeNode[] {
   return items
     .filter(item => (item.parentId ?? null) === parentId)
-    .sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    )
+    .sort(compareItemOrder)
     .map(item => ({
       item,
       children: buildTree(items, item.id),
@@ -94,9 +93,7 @@ export function getChildLinks(items: SidebarItem[], parentId: string): SmartLink
     .filter(
       (item): item is SmartLink => item.kind === 'link' && item.parentId === parentId,
     )
-    .sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    )
+    .sort(compareItemOrder)
 }
 
 export function nextSectionOrder(sections: SidebarSection[]): number {

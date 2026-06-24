@@ -1,5 +1,6 @@
 import type { Note, Page, SidebarItem, SmartLink } from '../types/note'
 import type { SidebarSection, WorkspaceSnapshot } from '../types/workspace'
+import { assignMissingOrders } from '../utils/itemOrder'
 import { normalizeUrl, titleFromUrl } from '../utils/url'
 
 export const STORAGE_KEY = 'notes_hub_v2'
@@ -52,10 +53,12 @@ export function createSection(title = 'New section', order = 0): SidebarSection 
 export function seedWorkspace(): { items: SidebarItem[]; sections: SidebarSection[] } {
   const section = createSection('General', 0)
   const welcome = createPage('Welcome', null, section.id)
+  welcome.order = 0
   welcome.content =
     'Notes Hub is your space for notes and data.\n\nUse the sidebar to switch pages, add smart links, or create new ones.'
 
   const ideas = createPage('Ideas', null, section.id)
+  ideas.order = 1
   ideas.content = '- Project roadmap\n- Meeting notes\n- Research links'
 
   const repo = createLink(
@@ -64,6 +67,7 @@ export function seedWorkspace(): { items: SidebarItem[]; sections: SidebarSectio
     null,
     section.id,
   )
+  repo.order = 2
 
   return { items: [welcome, ideas, repo], sections: [section] }
 }
@@ -119,6 +123,14 @@ export function isValidItem(item: unknown): item is SidebarItem {
     record.sectionId !== null &&
     record.sectionId !== undefined &&
     typeof record.sectionId !== 'string'
+  ) {
+    return false
+  }
+
+  if (
+    record.order !== null &&
+    record.order !== undefined &&
+    typeof record.order !== 'number'
   ) {
     return false
   }
@@ -184,7 +196,7 @@ export function createSnapshot(
   revision = 0,
 ): WorkspaceSnapshot {
   const normalizedSections = normalizeSections(sections)
-  const normalized = normalizeItems(items, normalizedSections)
+  const normalized = assignMissingOrders(normalizeItems(items, normalizedSections))
   return {
     items: normalized,
     sections: normalizedSections,
@@ -231,9 +243,11 @@ export function loadLocalSnapshot(): WorkspaceSnapshot {
     const sections = normalizeSections(
       Array.isArray(parsed.sections) ? parsed.sections.filter(isValidSection) : [],
     )
-    const items = normalizeItems(
-      Array.isArray(parsed.items) ? parsed.items.filter(isValidItem) : [],
-      sections,
+    const items = assignMissingOrders(
+      normalizeItems(
+        Array.isArray(parsed.items) ? parsed.items.filter(isValidItem) : [],
+        sections,
+      ),
     )
 
     if (items.length === 0) {

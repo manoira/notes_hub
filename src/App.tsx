@@ -26,6 +26,9 @@ function App() {
     updateSection,
     deleteSection,
     moveItemToSection,
+    moveItem,
+    moveItemToSectionEnd,
+    renameItem,
     updatePage,
     updateLink,
     deleteItem,
@@ -53,6 +56,10 @@ function App() {
         onUpdateSection={updateSection}
         onDeleteSection={deleteSection}
         onMoveItemToSection={moveItemToSection}
+        onMoveItem={moveItem}
+        onMoveItemToSectionEnd={moveItemToSectionEnd}
+        onRenameItem={renameItem}
+        onDeleteItem={deleteItem}
       />
       {activeItem?.kind === 'page' ? (
         <NoteEditor

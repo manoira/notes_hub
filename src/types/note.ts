@@ -6,6 +6,8 @@ export type SidebarItemBase = {
   parentId: string | null
   /** Top-level grouping in the sidebar (Notion-style section). Ignored when parentId is set. */
   sectionId: string | null
+  /** Sort order among siblings (lower = higher in the list). */
+  order?: number
 }
 
 export type Page = SidebarItemBase & {
