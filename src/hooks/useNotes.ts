@@ -13,10 +13,12 @@ import {
   createSection,
   createSnapshot,
   loadLocalSnapshot,
+  normalizeItems,
+  normalizeSections,
   saveLocalSnapshot,
 } from '../storage/workspace'
 import { collectDescendantIds, isValidParentId, nextSectionOrder } from '../utils/tree'
-import { applyItemDrop, applyItemDropToSection, orderForNewSibling } from '../utils/itemOrder'
+import { applyItemDrop, applyItemDropToSection, assignMissingOrders, orderForNewSibling } from '../utils/itemOrder'
 import type { DropPosition } from '../utils/itemOrder'
 import { normalizeUrl } from '../utils/url'
 
@@ -28,6 +30,7 @@ type AddItemContext = {
 export function useNotes() {
   const storageRef = useRef(createWorkspaceStorage())
   const revisionRef = useRef(0)
+  const allowRemoteSaveRef = useRef(true)
   const [loaded, setLoaded] = useState(false)
   const [items, setItems] = useState<SidebarItem[]>([])
   const [sections, setSections] = useState<SidebarSection[]>([])
@@ -47,9 +50,13 @@ export function useNotes() {
         const snapshot = await storage.load()
         if (cancelled) return
 
+        const sections = normalizeSections(snapshot.sections ?? [])
+        const items = assignMissingOrders(normalizeItems(snapshot.items, sections))
+
         revisionRef.current = snapshot.revision
-        setItems(snapshot.items)
-        setSections(snapshot.sections ?? [])
+        allowRemoteSaveRef.current = true
+        setItems(items)
+        setSections(sections)
         setActiveId(snapshot.activeId)
         setPersistence({ status: 'ready', mode: storage.mode })
         setLoaded(true)
@@ -58,6 +65,7 @@ export function useNotes() {
 
         const fallback = loadLocalSnapshot()
         revisionRef.current = fallback.revision
+        allowRemoteSaveRef.current = storage.mode !== 'remote'
         setItems(fallback.items)
         setSections(fallback.sections ?? [])
         setActiveId(fallback.activeId)
@@ -84,6 +92,8 @@ export function useNotes() {
     if (!loaded) return
 
     const storage = storageRef.current
+    if (storage.mode === 'remote' && !allowRemoteSaveRef.current) return
+
     setPersistence(current =>
       current.status === 'error' ? current : { status: 'saving', mode: storage.mode },
     )

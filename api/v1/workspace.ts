@@ -28,6 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const result = await updateWorkspace({
         items: body.items,
+        sections: body.sections,
         activeId: body.activeId ?? null,
         revision: body.revision,
         updatedAt: body.updatedAt ?? new Date().toISOString(),
@@ -41,6 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           serverRevision: result.serverRevision,
           revision: current.revision,
           items: current.items,
+          sections: current.sections,
           activeId: current.activeId,
           updatedAt: current.updatedAt,
         })
