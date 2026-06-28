@@ -100,3 +100,13 @@ export function nextSectionOrder(sections: SidebarSection[]): number {
   if (sections.length === 0) return 0
   return Math.max(...sections.map(section => section.order)) + 1
 }
+
+export function getItemBreadcrumb(items: SidebarItem[], itemId: string): SidebarItem[] {
+  const item = items.find(entry => entry.id === itemId)
+  if (!item) return []
+
+  const parentId = item.parentId ?? null
+  if (!parentId) return [item]
+
+  return [...getItemBreadcrumb(items, parentId), item]
+}

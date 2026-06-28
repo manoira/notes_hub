@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Page, SmartLink } from '../types/note'
 import type { PersistenceState } from '../types/workspace'
-import { APP_VERSION } from '../buildInfo'
 import { getTextareaCaretRect } from '../utils/caretPosition'
 import {
   applySlashCommand,
@@ -120,25 +119,26 @@ export function NoteEditor({
 
   return (
     <section className="editor">
-      <div className="editor-toolbar">
-        <span className="editor-meta">
-          Last edited {new Date(note.updatedAt).toLocaleString()} · build {APP_VERSION}
-        </span>
-        <button type="button" className="btn-danger" onClick={onDelete}>
-          Delete
-        </button>
-      </div>
-      <input
-        className="editor-title"
-        value={note.title}
-        onChange={e => onChange({ title: e.target.value })}
-        placeholder="Untitled"
-        aria-label="Note title"
-      />
-      {onSelectLink ? (
-        <PageLinkBookmarks links={childLinks} onSelectLink={onSelectLink} />
-      ) : null}
-      <div className="editor-body-wrap">
+      <div className="editor-page">
+        <input
+          className="editor-title"
+          value={note.title}
+          onChange={e => onChange({ title: e.target.value })}
+          placeholder="Untitled"
+          aria-label="Note title"
+        />
+        <div className="editor-meta-row">
+          <span className="editor-meta">
+            Edited {new Date(note.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+          </span>
+          <button type="button" className="editor-delete-btn" onClick={onDelete}>
+            Delete
+          </button>
+        </div>
+        {onSelectLink ? (
+          <PageLinkBookmarks links={childLinks} onSelectLink={onSelectLink} />
+        ) : null}
+        <div className="editor-body-wrap">
         <textarea
           ref={bodyRef}
           className="editor-body"
@@ -161,6 +161,7 @@ export function NoteEditor({
           placeholder="Start writing... Type / for headings, lists, and more."
           aria-label="Note content"
         />
+        </div>
       </div>
       <p className="editor-storage-hint">{storageHint(persistence)}</p>
       {slashState &&

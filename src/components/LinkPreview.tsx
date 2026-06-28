@@ -41,44 +41,42 @@ export function LinkPreview({ link, onChange, onDelete }: LinkPreviewProps) {
 
   return (
     <>
-      <section className="link-preview">
-        <div className="editor-toolbar">
-          <span className="editor-meta">
-            Smart link · {hostname}
-          </span>
-          <div className="link-toolbar-actions">
-            {urlIsValid ? (
-              <button
-                type="button"
+      <section className="link-preview editor">
+        <div className="editor-page">
+          <input
+            className="editor-title"
+            value={link.title}
+            onChange={event => onChange({ title: event.target.value })}
+            placeholder="Link title"
+            aria-label="Link title"
+          />
+          <div className="editor-meta-row">
+            <span className="editor-meta">Smart link · {hostname}</span>
+            <div className="link-toolbar-actions">
+              {urlIsValid ? (
+                <button
+                  type="button"
+                  className="btn-secondary btn-inline"
+                  onClick={() => setIsFullscreen(true)}
+                >
+                  Fullscreen
+                </button>
+              ) : null}
+              <a
                 className="btn-secondary btn-inline"
-                onClick={() => setIsFullscreen(true)}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                Fullscreen
+                Open in new tab
+              </a>
+              <button type="button" className="editor-delete-btn" onClick={onDelete}>
+                Delete
               </button>
-            ) : null}
-            <a
-              className="btn-secondary btn-inline"
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Open in new tab
-            </a>
-            <button type="button" className="btn-danger" onClick={onDelete}>
-              Delete
-            </button>
+            </div>
           </div>
-        </div>
 
-        <input
-          className="editor-title"
-          value={link.title}
-          onChange={event => onChange({ title: event.target.value })}
-          placeholder="Link title"
-          aria-label="Link title"
-        />
-
-        <label className="link-url-field">
+          <label className="link-url-field">
           <span>URL</span>
           <input
             type="url"
@@ -115,6 +113,7 @@ export function LinkPreview({ link, onChange, onDelete }: LinkPreviewProps) {
             </p>
           </div>
         )}
+        </div>
       </section>
 
       {isFullscreen && urlIsValid ? (

@@ -46,8 +46,8 @@ export function SidebarTopbar({
       {expanded ? (
         <>
           <div className="sidebar-topbar-brand" aria-label="Notes Hub">
-            <span className="sidebar-topbar-brand-icon" aria-hidden="true">
-              ⌂
+            <span className="sidebar-topbar-logo" aria-hidden="true">
+              N
             </span>
             <span className="sidebar-topbar-brand-label">Notes Hub</span>
           </div>

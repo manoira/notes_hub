@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { LinkPreview } from './components/LinkPreview'
+import { EditorTopbar } from './components/EditorTopbar'
 import { NoteEditor } from './components/NoteEditor'
 import { Sidebar } from './components/Sidebar'
 import { APP_VERSION } from './buildInfo'
@@ -61,26 +62,31 @@ function App() {
         onRenameItem={renameItem}
         onDeleteItem={deleteItem}
       />
-      {activeItem?.kind === 'page' ? (
-        <NoteEditor
-          key={activeItem.id}
-          note={activeItem}
-          childLinks={getChildLinks(items, activeItem.id)}
-          onSelectLink={selectItem}
-          onChange={patch => updatePage(activeItem.id, patch)}
-          onDelete={() => deleteItem(activeItem.id)}
-          persistence={persistence}
-        />
-      ) : activeItem?.kind === 'link' ? (
-        <LinkPreview
-          key={activeItem.id}
-          link={activeItem}
-          onChange={patch => updateLink(activeItem.id, patch)}
-          onDelete={() => deleteItem(activeItem.id)}
-        />
-      ) : (
-        <main className="editor-empty">Select or create a page or smart link</main>
-      )}
+      <div className="main-column">
+        {activeItem ? (
+          <EditorTopbar items={items} activeId={activeItem.id} onSelect={selectItem} />
+        ) : null}
+        {activeItem?.kind === 'page' ? (
+          <NoteEditor
+            key={activeItem.id}
+            note={activeItem}
+            childLinks={getChildLinks(items, activeItem.id)}
+            onSelectLink={selectItem}
+            onChange={patch => updatePage(activeItem.id, patch)}
+            onDelete={() => deleteItem(activeItem.id)}
+            persistence={persistence}
+          />
+        ) : activeItem?.kind === 'link' ? (
+          <LinkPreview
+            key={activeItem.id}
+            link={activeItem}
+            onChange={patch => updateLink(activeItem.id, patch)}
+            onDelete={() => deleteItem(activeItem.id)}
+          />
+        ) : (
+          <main className="editor-empty">Select or create a page or smart link</main>
+        )}
+      </div>
     </div>
   )
 }
