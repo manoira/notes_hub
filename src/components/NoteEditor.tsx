@@ -1,16 +1,18 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Page, SmartLink } from '../types/note'
+import type { InfoPanel, Page, SmartLink } from '../types/note'
 import type { PersistenceState } from '../types/workspace'
 import { getTextareaCaretRect } from '../utils/caretPosition'
 import {
   applySlashCommand,
   filterSlashCommands,
   getSlashMenuState,
+  removeSlashQuery,
   type SlashCommand,
   type SlashMenuState,
 } from '../utils/slashCommands'
 import { storageHint } from '../utils/storageHint'
+import { InfoPanels } from './InfoPanels'
 import { PageLinkBookmarks } from './PageLinkBookmarks'
 import { SlashMenu } from './SlashMenu'
 
@@ -19,7 +21,7 @@ type NoteEditorProps = {
   childLinks?: SmartLink[]
   onSelectLink?: (id: string) => void
   persistence: PersistenceState
-  onChange: (patch: Partial<Pick<Page, 'title' | 'content'>>) => void
+  onChange: (patch: Partial<Pick<Page, 'title' | 'content' | 'panels'>>) => void
   onDelete: () => void
 }
 
@@ -36,14 +38,30 @@ export function NoteEditor({
   const [slashState, setSlashState] = useState<SlashMenuState | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 360 })
+  const [autoFocusPanelId, setAutoFocusPanelId] = useState<string | null>(null)
 
+  const panels = note.panels ?? []
   const menuCommands = slashState ? filterSlashCommands(slashState.query) : []
 
   useEffect(() => {
     setCursor(0)
     setSlashState(null)
     setSelectedIndex(0)
+    setAutoFocusPanelId(null)
   }, [note.id])
+
+  const handlePanelsChange = useCallback(
+    (next: InfoPanel[]) => onChange({ panels: next }),
+    [onChange],
+  )
+
+  const clearAutoFocusPanel = useCallback(() => setAutoFocusPanelId(null), [])
+
+  function insertInformationPanel() {
+    const panel: InfoPanel = { id: crypto.randomUUID(), icon: '💡', text: '' }
+    onChange({ panels: [...panels, panel] })
+    setAutoFocusPanelId(panel.id)
+  }
 
   useEffect(() => {
     setSelectedIndex(current => (current < menuCommands.length ? current : 0))
@@ -64,6 +82,15 @@ export function NoteEditor({
   function selectSlashCommand(command: SlashCommand) {
     const textarea = bodyRef.current
     if (!textarea || !slashState) return
+
+    if (command.kind === 'panel') {
+      const result = removeSlashQuery(textarea.value, slashState)
+      onChange({ content: result.content })
+      setSlashState(null)
+      setCursor(result.cursor)
+      insertInformationPanel()
+      return
+    }
 
     const result = applySlashCommand(textarea.value, slashState, command)
     onChange({ content: result.content })
@@ -138,6 +165,12 @@ export function NoteEditor({
         {onSelectLink ? (
           <PageLinkBookmarks links={childLinks} onSelectLink={onSelectLink} />
         ) : null}
+        <InfoPanels
+          panels={panels}
+          autoFocusId={autoFocusPanelId}
+          onChange={handlePanelsChange}
+          onAutoFocusHandled={clearAutoFocusPanel}
+        />
         <div className="editor-body-wrap">
         <textarea
           ref={bodyRef}

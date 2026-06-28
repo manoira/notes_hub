@@ -10,9 +10,18 @@ export type SidebarItemBase = {
   order?: number
 }
 
+/** Notion-style callout: an icon paired with a block of text. */
+export type InfoPanel = {
+  id: string
+  icon: string
+  text: string
+}
+
 export type Page = SidebarItemBase & {
   kind: 'page'
   content: string
+  /** Information panels (callouts) rendered above the page body. */
+  panels?: InfoPanel[]
 }
 
 export type SmartLink = SidebarItemBase & {

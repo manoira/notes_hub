@@ -23,7 +23,7 @@ export function SlashMenu({
     )
   }
 
-  const groups = ['Text', 'Lists'] as const
+  const groups = ['Text', 'Lists', 'Blocks'] as const
 
   return (
     <div className="slash-menu" role="listbox" aria-label="Slash commands">

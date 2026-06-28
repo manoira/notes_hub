@@ -1,16 +1,16 @@
 import { applyHeadingAtCursor, type HeadingLevel } from './heading'
 import { applyListAtCursor, type ListType } from './list'
 
-export type SlashCommandKind = 'heading' | 'list'
+export type SlashCommandKind = 'heading' | 'list' | 'panel'
 
 export type SlashCommand = {
   id: string
   label: string
   description: string
   icon: string
-  group: 'Text' | 'Lists'
+  group: 'Text' | 'Lists' | 'Blocks'
   kind: SlashCommandKind
-  value: HeadingLevel | ListType
+  value?: HeadingLevel | ListType
   keywords: string[]
 }
 
@@ -115,6 +115,15 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     value: 6,
     keywords: ['done', 'checked', 'complete', 'task-done'],
   },
+  {
+    id: 'info-panel',
+    label: 'Information panel',
+    description: 'Highlighted callout with an icon',
+    icon: '💡',
+    group: 'Blocks',
+    kind: 'panel',
+    keywords: ['panel', 'callout', 'info', 'note', 'tip', 'highlight', 'box', 'aside'],
+  },
 ]
 
 export type SlashMenuState = {
@@ -158,18 +167,30 @@ export function filterSlashCommands(query: string): SlashCommand[] {
   })
 }
 
-export function applySlashCommand(
+/** Removes the typed `/query` from the content, returning the cleaned text and caret. */
+export function removeSlashQuery(
   content: string,
   state: SlashMenuState,
-  command: SlashCommand,
 ): { content: string; cursor: number } {
   const lineEndIndex = content.indexOf('\n', state.cursor)
   const lineEnd = lineEndIndex === -1 ? content.length : lineEndIndex
   const lineAfterCursor = content.slice(state.cursor, lineEnd)
 
-  const contentWithoutSlash =
-    content.slice(0, state.slashStart) + lineAfterCursor + content.slice(lineEnd)
-  const cursorAfterRemoval = state.slashStart + lineAfterCursor.length
+  return {
+    content: content.slice(0, state.slashStart) + lineAfterCursor + content.slice(lineEnd),
+    cursor: state.slashStart + lineAfterCursor.length,
+  }
+}
+
+export function applySlashCommand(
+  content: string,
+  state: SlashMenuState,
+  command: SlashCommand,
+): { content: string; cursor: number } {
+  const { content: contentWithoutSlash, cursor: cursorAfterRemoval } = removeSlashQuery(
+    content,
+    state,
+  )
 
   if (command.kind === 'heading') {
     return applyHeadingAtCursor(
@@ -179,5 +200,9 @@ export function applySlashCommand(
     )
   }
 
-  return applyListAtCursor(contentWithoutSlash, cursorAfterRemoval, command.value as ListType)
+  if (command.kind === 'list') {
+    return applyListAtCursor(contentWithoutSlash, cursorAfterRemoval, command.value as ListType)
+  }
+
+  return { content: contentWithoutSlash, cursor: cursorAfterRemoval }
 }
