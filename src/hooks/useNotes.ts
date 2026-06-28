@@ -232,7 +232,7 @@ export function useNotes() {
     setItems(prev => applyItemDropToSection(prev, draggedId, sectionId) ?? prev)
   }, [])
 
-  const updatePage = useCallback((id: string, patch: Partial<Pick<Page, 'title' | 'content' | 'panels'>>) => {
+  const updatePage = useCallback((id: string, patch: Partial<Pick<Page, 'title' | 'content' | 'panels' | 'cover' | 'typography'>>) => {
     setItems(prev =>
       prev.map(item =>
         item.id === id && item.kind === 'page'

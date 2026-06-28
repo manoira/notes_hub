@@ -17,11 +17,25 @@ export type InfoPanel = {
   text: string
 }
 
+export type PageCover = {
+  url: string
+  source: 'upload' | 'link' | 'unsplash'
+  attribution?: string
+}
+
+/** Per-page font choices (Google Fonts family ids). */
+export type PageTypography = {
+  headingFont?: string
+  bodyFont?: string
+}
+
 export type Page = SidebarItemBase & {
   kind: 'page'
   content: string
   /** Information panels (callouts) rendered above the page body. */
   panels?: InfoPanel[]
+  cover?: PageCover | null
+  typography?: PageTypography
 }
 
 export type SmartLink = SidebarItemBase & {

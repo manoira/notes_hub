@@ -8,6 +8,8 @@ Vercel hosts the **React frontend** and **serverless API** on the same domain �
 | ---- | ------- |
 | `/` | React app (Vite build from `dist/`) |
 | `/api/v1/workspace` | GET/PUT workspace sync |
+| `/api/v1/images/search` | Unsplash cover image search |
+| `/api/v1/uploads` | Cover image upload (Vercel Blob) |
 | `/api/health` | Health check |
 
 Storage uses **Upstash Redis** via the Vercel Marketplace (free Hobby tier is enough for personal notes). Without Redis env vars, the API falls back to in-memory storage (resets on cold start — dev only).
@@ -37,6 +39,8 @@ In **Project → Settings → Environment Variables**:
 | `WORKSPACE_TOKEN` | Long random secret | Production, Preview, Development |
 | `VITE_STORAGE_MODE` | `remote` | Production, Preview |
 | `VITE_WORKSPACE_TOKEN` | Same as `WORKSPACE_TOKEN` | Production, Preview |
+| `UNSPLASH_ACCESS_KEY` | Unsplash API access key | Production, Preview |
+| `BLOB_READ_WRITE_TOKEN` | Auto-set via Vercel Blob store | Production, Preview |
 | `VITE_APP_VERSION` | Leave empty — Vercel sets `VERCEL_GIT_COMMIT_SHA` at build time (optional) | |
 
 Leave **`VITE_API_BASE_URL` empty** so the app calls `/api/...` on the same domain.
